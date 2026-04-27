@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Shelf">
+<meta name="theme-color" content="#0f0f0f">
+<title>Shelf — Multi-lecteurs</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#0f0f0f;--bg2:#1a1a1a;--bg3:#242424;--bg4:#2e2e2e;
+  --text:#f0f0f0;--text2:#a0a0a0;--text3:#606060;
+  --border:#2a2a2a;--border2:#383838;
+  --green:#1D9E75;--amber:#BA7517;--purple:#7F77DD;--blue:#378ADD;--red:#E24B4A;
+  --r:12px;--rsm:8px;
+  --st:env(safe-area-inset-top);--sb:env(safe-area-inset-bottom);
+}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100dvh;overflow-x:hidden}
+
+/* SETUP */
+.setup{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100dvh;gap:16px;padding:2rem;text-align:center}
+.logo{font-family:'Syne',sans-serif;font-size:36px;font-weight:700;color:var(--text);letter-spacing:-1px;margin-bottom:.25rem}
+.logo-sub{font-size:14px;color:var(--text3);max-width:260px;line-height:1.6;margin-bottom:.5rem}
+.setup input{width:100%;max-width:300px;padding:13px 16px;border:1px solid var(--border2);border-radius:var(--rsm);background:var(--bg2);font-size:16px;font-family:'DM Sans',sans-serif;color:var(--text);text-align:center;outline:none}
+.setup input:focus{border-color:var(--border2);box-shadow:0 0 0 2px rgba(255,255,255,.08)}
+.setup-btn{width:100%;max-width:300px;padding:13px;background:var(--text);color:var(--bg);border:none;border-radius:var(--rsm);font-size:15px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:pointer}
+.existing-label{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin-top:.5rem}
+.existing-pills{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;max-width:300px}
+.epill{padding:5px 14px;border:1px solid var(--border2);border-radius:20px;font-size:13px;color:var(--text2);cursor:pointer;background:var(--bg2)}
+.epill:active{background:var(--bg3)}
+
+/* HEADER */
+.header{position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--border);padding:calc(var(--st) + 10px) 16px 10px}
+.hrow{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.app-logo{font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:var(--text);letter-spacing:-.5px;flex:1}
+.ubadge{display:flex;align-items:center;gap:5px;padding:4px 10px 4px 5px;background:var(--bg2);border:1px solid var(--border2);border-radius:20px;cursor:pointer;flex-shrink:0}
+.uav{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0}
+.uname{font-size:12px;color:var(--text2)}
+.btn-add{background:var(--text);color:var(--bg);border:none;border-radius:var(--rsm);padding:8px 14px;font-size:13px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:pointer;flex-shrink:0}
+.sbox{display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--rsm);padding:0 12px}
+.sbox svg{flex-shrink:0;opacity:.35}
+.sbox input{flex:1;background:transparent;border:none;outline:none;color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;padding:9px 0}
+.sbox input::placeholder{color:var(--text3)}
+
+/* FILTERS */
+.filters{padding:10px 16px 0;background:var(--bg)}
+.flabel{font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin-bottom:5px;font-weight:500}
+.pills{display:flex;gap:5px;overflow-x:auto;scrollbar-width:none;padding-bottom:10px}
+.pills::-webkit-scrollbar{display:none}
+.pill{flex-shrink:0;padding:5px 13px;border:1px solid var(--border2);border-radius:20px;font-size:12px;font-family:'DM Sans',sans-serif;cursor:pointer;background:transparent;color:var(--text2);white-space:nowrap;transition:all .15s}
+.pill.on{background:var(--text);color:var(--bg);border-color:var(--text);font-weight:500}
+.pn{font-size:10px;opacity:.55;margin-left:3px}
+.readers-row{font-size:11px;color:var(--text3);padding:0 16px 8px;border-bottom:1px solid var(--border)}
+.readers-row span{color:var(--text2)}
+
+/* GRID */
+.grid-wrap{padding:12px 12px calc(72px + var(--sb))}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:10px}
+
+/* CARDS */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;cursor:pointer;transition:border-color .15s;position:relative;-webkit-user-select:none;user-select:none}
+.card:active{transform:scale(.98);opacity:.9}
+.card.shared-card{border-style:dashed;border-color:var(--border2)}
+.cover{width:100%;height:185px;object-fit:cover;display:block;background:var(--bg3)}
+.cph{width:100%;height:185px;display:flex;align-items:center;justify-content:center;font-size:40px}
+.shared-tag{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.65);border-radius:4px;padding:2px 7px;font-size:9px;color:#ccc;backdrop-filter:blur(6px);letter-spacing:.3px}
+.add-btn{position:absolute;top:8px;left:8px;background:var(--bg);border:1px solid var(--border2);border-radius:4px;padding:3px 8px;font-size:9px;color:var(--text2);cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap}
+.add-btn:active{background:var(--text);color:var(--bg)}
+.cbody{padding:9px 9px 6px}
+.cmeta{font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin-bottom:2px;font-weight:500}
+.ctitle{font-size:12px;font-weight:500;color:var(--text);line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:33px;margin-bottom:7px}
+.cfoot{display:flex;align-items:center;justify-content:space-between;gap:4px}
+.sdot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.prog{font-size:12px;color:var(--text2);font-weight:500;flex:1;margin-left:4px}
+.inc{width:28px;height:28px;border-radius:50%;border:1px solid var(--border2);background:var(--bg3);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2);flex-shrink:0;line-height:1}
+.inc:active{background:var(--text);color:var(--bg);border-color:var(--text);transform:scale(.88)}
+.inc[disabled]{opacity:.2;cursor:default}
+.cread{display:flex;align-items:center;gap:4px;padding:0 9px 7px}
+.rav{width:14px;height:14px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#fff;flex-shrink:0}
+.rname{font-size:10px;color:var(--text3)}
+.lup{font-size:10px;color:var(--text3);padding:0 9px 7px;text-align:right}
+.snbadge{display:inline-block;font-size:9px;background:var(--bg3);border:1px solid var(--border2);border-radius:3px;padding:1px 4px;margin-left:3px;vertical-align:middle}
+.empty{grid-column:1/-1;text-align:center;padding:3.5rem 1rem;color:var(--text3);font-size:14px;line-height:2.2}
+
+/* FAB */
+.fab{position:fixed;bottom:calc(18px + var(--sb));right:18px;width:54px;height:54px;border-radius:50%;background:var(--text);color:var(--bg);border:none;font-size:26px;cursor:pointer;z-index:30;box-shadow:0 4px 24px rgba(0,0,0,.6);display:none;align-items:center;justify-content:center}
+@media(max-width:500px){.fab{display:flex}.btn-add{display:none}}
+
+/* MODAL */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:50;display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px)}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r) var(--r) 0 0;width:100%;max-height:92dvh;overflow-y:auto;display:flex;flex-direction:column}
+.mhandle{width:36px;height:4px;background:var(--border2);border-radius:2px;margin:12px auto 0;flex-shrink:0}
+.mhead{display:flex;align-items:center;justify-content:space-between;padding:14px 20px 0;flex-shrink:0}
+.mtitle{font-family:'Syne',sans-serif;font-size:17px;font-weight:700;color:var(--text)}
+.mclose{background:var(--bg3);border:none;border-radius:50%;width:28px;height:28px;color:var(--text2);font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.mbody{padding:14px 20px;flex:1;overflow-y:auto}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:10px;color:var(--text3);margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:.5px}
+.field input,.field select,.field textarea{width:100%;padding:10px 12px;border:1px solid var(--border2);border-radius:var(--rsm);background:var(--bg3);font-size:15px;font-family:'DM Sans',sans-serif;color:var(--text);outline:none;-webkit-appearance:none}
+.field select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12'%3E%3Cpath fill='%23606060' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:34px}
+.field textarea{resize:none;min-height:70px;line-height:1.5}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mactions{padding:12px 20px calc(14px + var(--sb));display:flex;gap:10px;border-top:1px solid var(--border);flex-shrink:0;background:var(--bg2)}
+.msave{flex:1;background:var(--text);color:var(--bg);border:none;border-radius:var(--rsm);padding:13px;font-size:15px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:pointer}
+.mdel{background:transparent;border:1px solid var(--red);color:var(--red);border-radius:var(--rsm);padding:13px 14px;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif}
+
+/* TOAST */
+.toast{position:fixed;bottom:calc(22px + var(--sb));left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:9px 20px;border-radius:20px;font-size:12px;font-weight:500;font-family:'DM Sans',sans-serif;z-index:100;opacity:0;transition:opacity .2s;white-space:nowrap;pointer-events:none}
+</style>
+</head>
+<body>
+
+<div id="root"></div>
+<button class="fab" id="fab" onclick="openModal()" style="display:none">+</button>
+<div class="toast" id="toast"></div>
+
+<script>
+const ST={reading:{l:'En cours',c:'#1D9E75'},paused:{l:'En attente',c:'#BA7517'},planned:{l:'À découvrir',c:'#7F77DD'},completed:{l:'Terminé',c:'#378ADD'},dropped:{l:'Abandonné',c:'#E24B4A'}};
+const TYPES=['Manga','Anime','Webtoon','Webcomic','Novel','Autre'];
+const EM={Manga:'📖',Anime:'🎬',Webtoon:'📱',Webcomic:'🖥',Novel:'📚',Autre:'✨'};
+const COLS=['#1D9E75','#7F77DD','#D85A30','#378ADD','#BA7517','#D4537E','#0F6E56','#533AB7','#C4502A','#2B7A78'];
+const SEED={'bnestperso-ux':[
+  {id:'n1',title:'The Returns of the Mont Hua Sect',type:'Webtoon',status:'reading',platform:'Anime-Sama',season:0,progress:156,total:null,link:'https://anime-sama.to/catalogue/the-returns-of-the-mount-hua-sect/scan/vf/',coverUrl:'',notes:'',createdAt:'2026-04-23T23:52:00Z',updatedAt:'2026-04-23T23:52:00Z'},
+  {id:'n2',title:'The Indomitable Martial King',type:'Webtoon',status:'reading',platform:'',season:0,progress:127,total:null,link:'',coverUrl:'',notes:'',createdAt:'2026-04-22T09:13:00Z',updatedAt:'2026-04-22T09:13:00Z'},
+  {id:'n3',title:'Return of the Iron-Blooded Hound',type:'Webtoon',status:'reading',platform:'',season:0,progress:156,total:null,link:'',coverUrl:'',notes:'',createdAt:'2026-04-19T07:45:00Z',updatedAt:'2026-04-19T07:45:00Z'},
+  {id:'n4',title:'Manager Kim',type:'Webtoon',status:'reading',platform:'',season:0,progress:198,total:null,link:'',coverUrl:'',notes:'',createdAt:'2026-04-19T07:47:00Z',updatedAt:'2026-04-19T07:47:00Z'},
+  {id:'n5',title:'Nano Machine',type:'Webtoon',status:'reading',platform:'',season:0,progress:306,total:null,link:'',coverUrl:'',notes:'',createdAt:'2026-04-19T07:48:00Z',updatedAt:'2026-04-19T07:48:00Z'},
+  {id:'n6',title:'Myst Might Mayhem',type:'Webtoon',status:'reading',platform:'',season:0,progress:109,total:null,link:'',coverUrl:'',notes:'',createdAt:'2026-04-19T07:48:00Z',updatedAt:'2026-04-19T07:48:00Z'},
+  {id:'n7',title:'Rust',type:'Webtoon',status:'paused',platform:'',season:0,progress:55,total:null,link:'',coverUrl:'',notes:'',createdAt:'2026-04-19T07:55:00Z',updatedAt:'2026-04-19T07:55:00Z'},
+  {id:'n9',title:'One Piece',type:'Manga',status:'reading',platform:'',season:0,progress:1000,total:null,link:'',coverUrl:'',notes:'',createdAt:'2026-04-19T08:01:00Z',updatedAt:'2026-04-19T08:01:00Z'},
+  {id:'n12',title:'The Fable',type:'Manga',status:'reading',platform:'Anime-Sama',season:3,progress:17,total:null,link:'https://anime-sama.to/catalogue/the-fable/scan_the-third-secret/vf/',coverUrl:'',notes:'',createdAt:'2026-04-25T10:37:00Z',updatedAt:'2026-04-25T10:37:00Z'},
+  {id:'n18',title:'Frieren',type:'Anime',status:'reading',platform:'',season:2,progress:9,total:null,link:'',coverUrl:'',notes:'',createdAt:'2026-04-24T21:08:00Z',updatedAt:'2026-04-24T21:08:00Z'},
+  {id:'n10',title:'Rooster Fighter',type:'Anime',status:'planned',platform:'',season:1,progress:0,total:null,link:'',coverUrl:'',notes:'',createdAt:'2026-04-19T08:07:00Z',updatedAt:'2026-04-19T08:07:00Z'},
+  {id:'n11',title:'Bleach',type:'Anime',status:'planned',platform:'',season:1,progress:0,total:null,link:'',coverUrl:'',notes:'',createdAt:'2026-04-19T08:07:00Z',updatedAt:'2026-04-19T08:07:00Z'},
+  {id:'n13',title:'Gachiakuta',type:'Anime',status:'paused',platform:'',season:2,progress:0,total:null,link:'',coverUrl:'',notes:'',createdAt:'2026-04-19T08:11:00Z',updatedAt:'2026-04-19T08:11:00Z'},
+  {id:'n14',title:'Fullmetal Alchemist Brotherhood',type:'Anime',status:'planned',platform:'',season:1,progress:0,total:null,link:'',coverUrl:'',notes:'',createdAt:'2026-04-19T08:12:00Z',updatedAt:'2026-04-19T08:12:00Z'},
+  {id:'n15',title:'Jujutsu Kaisen',type:'Anime',status:'reading',platform:'',season:1,progress:0,total:null,link:'',coverUrl:'',notes:'',createdAt:'2026-04-19T08:14:00Z',updatedAt:'2026-04-19T08:14:00Z'},
+  {id:'n16',title:'My Hero Academia',type:'Anime',status:'reading',platform:'',season:2,progress:0,total:null,link:'',coverUrl:'',notes:'',createdAt:'2026-04-19T08:14:00Z',updatedAt:'2026-04-19T08:14:00Z'},
+  {id:'n17',title:'Common Side Effects',type:'Anime',status:'planned',platform:'',season:1,progress:0,total:null,link:'',coverUrl:'',notes:'',createdAt:'2026-04-19T08:16:00Z',updatedAt:'2026-04-19T08:16:00Z'},
+  {id:'n8',title:'Orb : On the Movements of the Earth',type:'Anime',status:'reading',platform:'',season:0,progress:2,total:null,link:'',coverUrl:'',notes:'',createdAt:'2026-04-19T07:59:00Z',updatedAt:'2026-04-19T07:59:00Z'},
+]};
+
+let me=null, db={}, vf='mine', tf='all', editId=null;
+
+const ac=n=>COLS[n.split('').reduce((a,c)=>a+c.charCodeAt(0),0)%COLS.length];
+const ph=t=>{const c=COLS[t.split('').reduce((a,c)=>a+c.charCodeAt(0),0)%COLS.length];return`background:${c}18;color:${c}`;};
+const ago=d=>{const v=Math.floor((Date.now()-new Date(d))/86400000);if(v===0)return"aujourd'hui";if(v===1)return"hier";if(v<7)return`il y a ${v}j`;if(v<30)return`il y a ${Math.floor(v/7)} sem`;return`il y a ${Math.floor(v/30)} mois`;};
+const uid=()=>Math.random().toString(36).slice(2);
+const toast=m=>{const t=document.getElementById('toast');t.textContent=m;t.style.opacity='1';clearTimeout(t._t);t._t=setTimeout(()=>t.style.opacity='0',2200);};
+const myW=()=>db[me]||[];
+function sharedW(){
+  const myT=new Set(myW().map(w=>w.title.toLowerCase().trim()));
+  const myL=new Set(myW().map(w=>w.link||'').filter(Boolean));
+  const out=[];
+  Object.entries(db).forEach(([u,ws])=>{
+    if(u===me)return;
+    ws.forEach(w=>{if(!myT.has(w.title.toLowerCase().trim())&&!(w.link&&myL.has(w.link)))out.push({...w,_o:u});});
+  });
+  return out;
+}
+
+function getList(){
+  const q=(document.getElementById('si')||{}).value||'';
+  let list=vf==='mine'?myW().map(w=>({...w,_o:me})):vf==='shared'?sharedW():[...myW().map(w=>({...w,_o:me})),...sharedW()];
+  if(tf!=='all')list=list.filter(w=>w.type===tf);
+  if(q){const ql=q.toLowerCase();list=list.filter(w=>w.title.toLowerCase().includes(ql)||(w.platform||'').toLowerCase().includes(ql));}
+  return list.sort((a,b)=>new Date(b.updatedAt)-new Date(a.updatedAt));
+}
+
+function counts(){
+  const m=myW(),s=sharedW();
+  const base=vf==='mine'?m:vf==='shared'?s:[...m,...s];
+  const bt={};base.forEach(w=>{bt[w.type]=(bt[w.type]||0)+1;});
+  return{mine:m.length,shared:s.length,all:m.length+s.length,bt};
+}
+
+function render(){me?renderApp():renderSetup();}
+
+function renderSetup(){
+  document.getElementById('fab').style.display='none';
+  const rs=Object.keys(db);
+  document.getElementById('root').innerHTML=`<div class="setup">
+    <div class="logo">Shelf</div>
+    <div class="logo-sub">Bibliothèque partagée.<br>Entre ton pseudo pour commencer.</div>
+    <input id="sn" type="text" placeholder="Ton pseudo…" maxlength="20" autocomplete="off" onkeydown="if(event.key==='Enter')go()">
+    <button class="setup-btn" onclick="go()">Accéder à ma bibliothèque →</button>
+    ${rs.length?`<div class="existing-label" style="margin-top:.5rem">Déjà présents</div><div class="existing-pills">${rs.map(r=>`<div class="epill" onclick="jump('${r}')">${r}</div>`).join('')}</div>`:''}
+  </div>`;}
+
+function go(){const v=(document.getElementById('sn').value||'').trim();if(!v){toast('Entre un pseudo !');return;}me=v;if(!db[me])db[me]=[];save();render();}
+function jump(n){me=n;save();render();}
+function switchUser(){me=null;save();render();}
+
+function renderApp(){
+  const c=counts(),list=getList(),rs=Object.keys(db);
+  document.getElementById('fab').style.display='flex';
+  document.getElementById('root').innerHTML=`
+  <div class="header">
+    <div class="hrow">
+      <div class="app-logo">Shelf</div>
+      <div class="ubadge" onclick="switchUser()"><div class="uav" style="background:${ac(me)}">${me[0].toUpperCase()}</div><span class="uname">${me}</span></div>
+      <button class="btn-add" onclick="openModal()">+ Ajouter</button>
+    </div>
+    <div class="sbox"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="#f0f0f0" stroke-width="1.3"/><path d="M10.5 10.5L13 13" stroke="#f0f0f0" stroke-width="1.3" stroke-linecap="round"/></svg><input id="si" type="search" placeholder="Rechercher…" oninput="renderGrid()" autocomplete="off"></div>
+  </div>
+  <div class="filters">
+    <div class="flabel">Vue</div>
+    <div class="pills">
+      <button class="pill${vf==='mine'?' on':''}" onclick="setV('mine')">Mes lectures<span class="pn">${c.mine}</span></button>
+      <button class="pill${vf==='shared'?' on':''}" onclick="setV('shared')">Partagées<span class="pn">${c.shared}</span></button>
+      <button class="pill${vf==='all'?' on':''}" onclick="setV('all')">Tout<span class="pn">${c.all}</span></button>
+    </div>
+    <div class="flabel" style="margin-top:4px">Type</div>
+    <div class="pills">
+      <button class="pill${tf==='all'?' on':''}" onclick="setT('all')">Tout</button>
+      ${TYPES.map(t=>`<button class="pill${tf===t?' on':''}" onclick="setT('${t}')">${EM[t]} ${t}<span class="pn">${c.bt[t]||0}</span></button>`).join('')}
+    </div>
+  </div>
+  <div class="readers-row">${rs.length} lecteur${rs.length>1?'s':''} : <span>${rs.join(', ')}</span></div>
+  <div class="grid-wrap"><div class="grid" id="grid"></div></div>
+  <div class="overlay" id="ov" style="display:none" onclick="mClose(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="mhandle"></div>
+      <div class="mhead"><div class="mtitle" id="mt">Nouvelle œuvre</div><button class="mclose" onclick="closeModal()">×</button></div>
+      <div class="mbody">
+        <div class="field"><label>Titre *</label><input id="ft" type="text" placeholder="ex: One Piece" autocomplete="off"></div>
+        <div class="frow">
+          <div class="field"><label>Type</label><select id="fty">${TYPES.map(t=>`<option>${t}</option>`).join('')}</select></div>
+          <div class="field"><label>Statut</label><select id="fs"><option value="reading">En cours</option><option value="paused">En attente</option><option value="planned">À découvrir</option><option value="completed">Terminé</option><option value="dropped">Abandonné</option></select></div>
+        </div>
+        <div class="frow">
+          <div class="field"><label>Plateforme</label><input id="fp" type="text" placeholder="Anime-Sama…" autocomplete="off"></div>
+          <div class="field"><label>Saison</label><input id="fsn" type="number" min="0" placeholder="1"></div>
+        </div>
+        <div class="frow">
+          <div class="field"><label>Progression</label><input id="fpr" type="number" min="0" placeholder="0"></div>
+          <div class="field"><label>Total</label><input id="fto" type="number" min="0" placeholder="—"></div>
+        </div>
+        <div class="field"><label>Lien direct</label><input id="fl" type="url" placeholder="https://…" inputmode="url"></div>
+        <div class="field"><label>URL couverture</label><input id="fc" type="url" placeholder="https://…" inputmode="url"></div>
+        <div class="field"><label>Notes</label><textarea id="fn" placeholder="Impressions, arc en cours…"></textarea></div>
+      </div>
+      <div class="mactions">
+        <button class="mdel" id="bd" style="display:none" onclick="delWork()">Supprimer</button>
+        <button class="msave" onclick="saveWork()">Enregistrer</button>
+      </div>
+    </div>
+  </div>`;
+  renderGrid();
+}
+
+function renderGrid(){
+  const list=getList();
+  const g=document.getElementById('grid');if(!g)return;
+  if(!list.length){g.innerHTML=`<div class="empty">📚<br>${vf==='mine'&&myW().length===0?'Aucune lecture — appuie sur + pour commencer':'Aucun résultat'}`;return;}
+  g.innerHTML=list.map(w=>{
+    const s=ST[w.status],p=w.progress||0,isMe=w._o===me;
+    const label=w.type==='Anime'?(p===0?'—':`ép. ${p}`):`ch. ${p}`;
+    const sn=w.season>0?`<span class="snbadge">S${w.season}</span>`:'';
+    const cv=w.coverUrl?`<img class="cover" src="${w.coverUrl}" onerror="this.style.display='none';this.nextSibling.style.display='flex'" loading="lazy"><div class="cph" style="display:none;${ph(w.title)}">${EM[w.type]||'✨'}</div>`:`<div class="cph" style="${ph(w.title)}">${EM[w.type]||'✨'}</div>`;
+    const inc=isMe?`<button class="inc" onclick="event.stopPropagation();doInc('${w.id}')" title="+1">+</button>`:`<button class="inc" disabled>·</button>`;
+    const bottom=isMe?`<div class="lup">${ago(w.updatedAt)}</div>`:`<div class="cread"><div class="rav" style="background:${ac(w._o)}">${w._o[0].toUpperCase()}</div><span class="rname">${w._o}</span></div>`;
+    const stag=!isMe?`<div class="shared-tag">Partagée</div>`:'';
+    const abtn=!isMe?`<button class="add-btn" onclick="event.stopPropagation();addMine(${JSON.stringify({...w}).replace(/"/g,'&quot;')})">+ Mes lectures</button>`:'';
+    const click=isMe?`openModal('${w.id}')`:'';
+    return`<div class="card${!isMe?' shared-card':''}" onclick="${click}">${cv}${stag}${abtn}<div class="cbody"><div class="cmeta">${w.type}${w.platform?' · '+w.platform:''}${sn}</div><div class="ctitle">${w.title}</div><div class="cfoot"><span class="sdot" style="background:${s.c}"></span><span class="prog">${label}</span>${inc}</div></div>${bottom}</div>`;
+  }).join('');
+}
+
+function setV(v){vf=v;renderGrid();document.querySelector(`.pill[onclick="setV('mine')"]`)?.closest('.filters')&&renderApp();}
+function setT(t){tf=t;renderApp();}
+function setV(v){vf=v;renderApp();}
+
+function addMine(w){
+  const now=new Date().toISOString();
+  const n={...w,id:uid(),_o:undefined,createdAt:now,updatedAt:now};
+  delete n._o;
+  if(!db[me])db[me]=[];
+  db[me].push(n);
+  save();render();toast(`"${w.title}" ajouté à tes lectures`);
+}
+
+function doInc(id){
+  const w=(db[me]||[]).find(x=>x.id===id);if(!w)return;
+  w.progress=(w.progress||0)+1;w.updatedAt=new Date().toISOString();
+  save();renderGrid();toast(`+1 → ${w.type==='Anime'?'ép':'ch'}. ${w.progress}`);
+}
+
+function openModal(id){
+  editId=id||null;
+  const w=id?(db[me]||[]).find(x=>x.id===id):null;
+  document.getElementById('mt').textContent=w?w.title.slice(0,30)+(w.title.length>30?'…':''):'Nouvelle œuvre';
+  document.getElementById('ft').value=w?.title||'';
+  document.getElementById('fty').value=w?.type||'Manga';
+  document.getElementById('fs').value=w?.status||'reading';
+  document.getElementById('fp').value=w?.platform||'';
+  document.getElementById('fsn').value=w?.season||'';
+  document.getElementById('fpr').value=w?.progress??'';
+  document.getElementById('fto').value=w?.total??'';
+  document.getElementById('fl').value=w?.link||'';
+  document.getElementById('fc').value=w?.coverUrl||'';
+  document.getElementById('fn').value=w?.notes||'';
+  document.getElementById('bd').style.display=w?'block':'none';
+  document.getElementById('ov').style.display='flex';
+  document.body.style.overflow='hidden';
+}
+function closeModal(){document.getElementById('ov').style.display='none';document.body.style.overflow='';editId=null;}
+function mClose(e){if(e.target===document.getElementById('ov'))closeModal();}
+
+function saveWork(){
+  const title=document.getElementById('ft').value.trim();
+  if(!title){alert('Titre obligatoire.');return;}
+  const now=new Date().toISOString();
+  const data={title,type:document.getElementById('fty').value,status:document.getElementById('fs').value,platform:document.getElementById('fp').value.trim(),season:parseInt(document.getElementById('fsn').value)||0,progress:parseInt(document.getElementById('fpr').value)||0,total:parseInt(document.getElementById('fto').value)||null,link:document.getElementById('fl').value.trim(),coverUrl:document.getElementById('fc').value.trim(),notes:document.getElementById('fn').value.trim(),updatedAt:now};
+  if(!db[me])db[me]=[];
+  if(editId){Object.assign(db[me].find(x=>x.id===editId),data);}
+  else{db[me].push({id:uid(),createdAt:now,...data});}
+  save();closeModal();render();
+}
+
+function delWork(){
+  if(!confirm('Supprimer ?'))return;
+  db[me]=(db[me]||[]).filter(x=>x.id!==editId);
+  save();closeModal();render();
+}
+
+function save(){localStorage.setItem('shelf-multi',JSON.stringify({me,db}));}
+
+function load(){
+  try{
+    const raw=localStorage.getItem('shelf-multi');
+    if(raw){const p=JSON.parse(raw);db=p.db||{};me=p.me||null;}
+  }catch(e){}
+  if(Object.keys(db).length===0){db=JSON.parse(JSON.stringify(SEED));save();}
+  render();
+}
+
+load();
+</script>
+</body>
+</html>
