@@ -144,7 +144,7 @@ const SEED={'bnestperso-ux':[
   {id:'n8',title:'Orb : On the Movements of the Earth',type:'Anime',status:'reading',platform:'',season:0,progress:2,total:null,link:'',coverUrl:'',notes:'',createdAt:'2026-04-19T07:59:00Z',updatedAt:'2026-04-19T07:59:00Z'},
 ]};
 
-let me=null, db={}, vf='mine', tf='all', editId=null;
+let me=null, db={}, vf='mine', tf='all', sf='all', pf='all', editId=null;
 
 const ac=n=>COLS[n.split('').reduce((a,c)=>a+c.charCodeAt(0),0)%COLS.length];
 const ph=t=>{const c=COLS[t.split('').reduce((a,c)=>a+c.charCodeAt(0),0)%COLS.length];return`background:${c}18;color:${c}`;};
@@ -168,6 +168,8 @@ function getList(){
   const q=(document.getElementById('si')||{}).value||'';
   let list=vf==='mine'?myW().map(w=>({...w,_o:me})):vf==='shared'?sharedW():[...myW().map(w=>({...w,_o:me})),...sharedW()];
   if(tf!=='all')list=list.filter(w=>w.type===tf);
+  if(sf!=='all')list=list.filter(w=>w.status===sf);
+  if(pf!=='all')list=list.filter(w=>(w.platform||'').toLowerCase()===pf.toLowerCase());
   if(q){const ql=q.toLowerCase();list=list.filter(w=>w.title.toLowerCase().includes(ql)||(w.platform||'').toLowerCase().includes(ql));}
   return list.sort((a,b)=>new Date(b.updatedAt)-new Date(a.updatedAt));
 }
@@ -175,8 +177,18 @@ function getList(){
 function counts(){
   const m=myW(),s=sharedW();
   const base=vf==='mine'?m:vf==='shared'?s:[...m,...s];
-  const bt={};base.forEach(w=>{bt[w.type]=(bt[w.type]||0)+1;});
-  return{mine:m.length,shared:s.length,all:m.length+s.length,bt};
+  const bt={},bs={},bp={};
+  base.forEach(w=>{
+    bt[w.type]=(bt[w.type]||0)+1;
+    bs[w.status]=(bs[w.status]||0)+1;
+    if(w.platform){const pk=w.platform.toLowerCase();bp[pk]=(bp[pk]||0)+1;}
+  });
+  return{mine:m.length,shared:s.length,all:m.length+s.length,bt,bs,bp};
+}
+function getActivePlatforms(base){
+  const seen=new Map();
+  base.forEach(w=>{if(w.platform&&!seen.has(w.platform.toLowerCase()))seen.set(w.platform.toLowerCase(),w.platform);});
+  return [...seen.values()].sort();
 }
 
 function render(){me?renderApp():renderSetup();}
@@ -192,7 +204,25 @@ function renderSetup(){
     ${rs.length?`<div class="existing-label" style="margin-top:.5rem">Déjà présents</div><div class="existing-pills">${rs.map(r=>`<div class="epill" onclick="jump('${r}')">${r}</div>`).join('')}</div>`:''}
   </div>`;}
 
-function go(){const v=(document.getElementById('sn').value||'').trim();if(!v){toast('Entre un pseudo !');return;}me=v;if(!db[me])db[me]=[];save();render();}
+function go(){
+  const v=(document.getElementById('sn').value||'').trim();
+  if(!v){toast('Entre un pseudo !');return;}
+  me=v;
+  if(!db[me]){
+    // Migration automatique depuis l'ancienne version solo
+    try{
+      const old=localStorage.getItem('shelf-v1');
+      if(old){
+        const parsed=JSON.parse(old);
+        if(Array.isArray(parsed)&&parsed.length>0){
+          db[me]=parsed;
+          toast('✅ Tes lectures existantes ont été importées !');
+        }else{db[me]=[];}
+      }else{db[me]=[];}
+    }catch(e){db[me]=[];}
+  }
+  save();render();
+}
 function jump(n){me=n;save();render();}
 function switchUser(){me=null;save();render();}
 
@@ -215,11 +245,22 @@ function renderApp(){
       <button class="pill${vf==='shared'?' on':''}" onclick="setV('shared')">Partagées<span class="pn">${c.shared}</span></button>
       <button class="pill${vf==='all'?' on':''}" onclick="setV('all')">Tout<span class="pn">${c.all}</span></button>
     </div>
-    <div class="flabel" style="margin-top:4px">Type</div>
+    <div class="flabel" style="margin-top:6px">Type</div>
     <div class="pills">
       <button class="pill${tf==='all'?' on':''}" onclick="setT('all')">Tout</button>
       ${TYPES.map(t=>`<button class="pill${tf===t?' on':''}" onclick="setT('${t}')">${EM[t]} ${t}<span class="pn">${c.bt[t]||0}</span></button>`).join('')}
     </div>
+    <div class="flabel" style="margin-top:6px">Statut</div>
+    <div class="pills">
+      <button class="pill${sf==='all'?' on':''}" onclick="setSF('all')">Tout</button>
+      ${Object.entries(ST).map(([k,v])=>`<button class="pill${sf===k?' on':''}" onclick="setSF('${k}')" style="${sf===k?'':`border-color:${v.c}22`}"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${v.c};margin-right:4px;vertical-align:middle"></span>${v.l}<span class="pn">${c.bs[k]||0}</span></button>`).join('')}
+    </div>
+    ${getActivePlatforms(vf==='mine'?myW():vf==='shared'?sharedW():[...myW(),...sharedW()]).length>0?`
+    <div class="flabel" style="margin-top:6px">Plateforme</div>
+    <div class="pills">
+      <button class="pill${pf==='all'?' on':''}" onclick="setPF('all')">Toutes</button>
+      ${getActivePlatforms(vf==='mine'?myW():vf==='shared'?sharedW():[...myW(),...sharedW()]).map(p=>`<button class="pill${pf.toLowerCase()===p.toLowerCase()?' on':''}" onclick="setPF('${p}')">${p}<span class="pn">${c.bp[p.toLowerCase()]||0}</span></button>`).join('')}
+    </div>`:''}
   </div>
   <div class="readers-row">${rs.length} lecteur${rs.length>1?'s':''} : <span>${rs.join(', ')}</span></div>
   <div class="grid-wrap"><div class="grid" id="grid"></div></div>
@@ -272,9 +313,10 @@ function renderGrid(){
   }).join('');
 }
 
-function setV(v){vf=v;renderGrid();document.querySelector(`.pill[onclick="setV('mine')"]`)?.closest('.filters')&&renderApp();}
-function setT(t){tf=t;renderApp();}
 function setV(v){vf=v;renderApp();}
+function setT(t){tf=t;renderApp();}
+function setSF(s){sf=s;renderApp();}
+function setPF(p){pf=p;renderApp();}
 
 function addMine(w){
   const now=new Date().toISOString();
