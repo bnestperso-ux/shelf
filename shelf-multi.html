@@ -152,13 +152,14 @@ const ago=d=>{const v=Math.floor((Date.now()-new Date(d))/86400000);if(v===0)ret
 const uid=()=>Math.random().toString(36).slice(2);
 const toast=m=>{const t=document.getElementById('toast');t.textContent=m;t.style.opacity='1';clearTimeout(t._t);t._t=setTimeout(()=>t.style.opacity='0',2200);};
 const myW=()=>db[me]||[];
+function normalizeTitle(t){return t.toLowerCase().trim().replace(/['\u2019\u2018\-\s]+/g,' ').trim();}
 function sharedW(){
-  const myT=new Set(myW().map(w=>w.title.toLowerCase().trim()));
-  const myL=new Set(myW().map(w=>w.link||'').filter(Boolean));
+  // Dédup sur le titre uniquement — le lien est plateforme-dépendant, pas un identifiant fiable
+  const myT=new Set(myW().map(w=>normalizeTitle(w.title)));
   const out=[];
   Object.entries(db).forEach(([u,ws])=>{
     if(u===me)return;
-    ws.forEach(w=>{if(!myT.has(w.title.toLowerCase().trim())&&!(w.link&&myL.has(w.link)))out.push({...w,_o:u});});
+    ws.forEach(w=>{if(!myT.has(normalizeTitle(w.title)))out.push({...w,_o:u});});
   });
   return out;
 }
