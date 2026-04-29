@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Memio">
+<meta name="apple-mobile-web-app-title" content="Memyo">
 <meta name="theme-color" content="#0f0f0f">
-<title>Memio</title>
+<title>Memyo</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -132,7 +132,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
 </style>
 </head>
 <body>
-<div id="root"><div class="loading"><div class="loading-logo">Memio</div><div class="spinner"></div></div></div>
+<div id="root"><div class="loading"><div class="loading-logo">Memyo</div><div class="spinner"></div></div></div>
 <div class="sync-dot" id="sync-dot" title="Synchronisation"></div>
 <button class="fab" id="fab" onclick="openModal()" style="display:none">+</button>
 <div class="toast" id="toast"></div>
@@ -225,7 +225,7 @@ function getList(){
 // ── FIREBASE SYNC ────────────────────────────────────────────
 function startListening(){
   setSyncState('syncing');
-  const dataRef = ref(db, 'memio');
+  const dataRef = ref(db, 'memyo');
   onValue(dataRef, snapshot => {
     allData = snapshot.val() || {};
     setSyncState('ok');
@@ -240,7 +240,7 @@ function startListening(){
 async function saveWork(workId, workData){
   setSyncState('syncing');
   try {
-    await set(ref(db, 'memio/'+me+'/'+workId), workData);
+    await set(ref(db, 'memyo/'+me+'/'+workId), workData);
     setSyncState('ok');
   } catch(e){
     setSyncState('error');
@@ -251,7 +251,7 @@ async function saveWork(workId, workData){
 async function deleteWork(workId){
   setSyncState('syncing');
   try {
-    await remove(ref(db, 'memio/'+me+'/'+workId));
+    await remove(ref(db, 'memyo/'+me+'/'+workId));
     setSyncState('ok');
   } catch(e){
     setSyncState('error');
@@ -267,7 +267,7 @@ function renderSetup(){
   const users = Object.keys(allData);
   document.getElementById('root').innerHTML =
     '<div class="setup">'
-    +'<div class="logo">Memio</div>'
+    +'<div class="logo">Memyo</div>'
     +'<div class="logo-sub">Bibliotheque partagee en temps reel.<br>Entre ton pseudo pour commencer.</div>'
     +'<input id="sn" type="text" placeholder="Ton pseudo..." maxlength="20" autocomplete="off" onkeydown="if(event.key===\'Enter\')window._go()">'
     +'<button class="setup-btn" onclick="window._go()">Acceder a ma bibliotheque</button>'
@@ -287,7 +287,7 @@ function renderApp(){
   document.getElementById('fab').style.display='flex';
   document.getElementById('root').innerHTML =
     '<div class="header">'
-    +'<div class="hrow"><div class="app-logo">Memio</div>'
+    +'<div class="hrow"><div class="app-logo">Memyo</div>'
     +'<div class="ubadge" onclick="window._switchUser()"><div class="uav" style="background:'+ac(me)+'">'+me[0].toUpperCase()+'</div><span class="uname">'+me+'</span></div>'
     +'<button class="btn-add" onclick="openModal()">+ Ajouter</button></div>'
     +'<div class="sbox"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="#f0f0f0" stroke-width="1.3"/><path d="M10.5 10.5L13 13" stroke="#f0f0f0" stroke-width="1.3" stroke-linecap="round"/></svg>'
@@ -384,11 +384,11 @@ window._go = function(){
   const v=(document.getElementById('sn').value||'').trim();
   if(!v){toast('Entre un pseudo !');return;}
   me=v;
-  localStorage.setItem('memio-user',me);
+  localStorage.setItem('memyo-user',me);
   render();
 };
-window._jump = function(n){me=n;localStorage.setItem('memio-user',me);render();};
-window._switchUser = function(){me=null;localStorage.removeItem('memio-user');render();};
+window._jump = function(n){me=n;localStorage.setItem('memyo-user',me);render();};
+window._switchUser = function(){me=null;localStorage.removeItem('memyo-user');render();};
 window._setV = function(v){vf=v;renderApp();};
 window._toggleTf = function(t){tf.has(t)?tf.delete(t):tf.add(t);renderApp();};
 window._toggleSf = function(s){sf.has(s)?sf.delete(s):sf.add(s);renderApp();};
@@ -535,7 +535,7 @@ window.openGoogleImages = function(){
 };
 
 // ── INIT ─────────────────────────────────────────────────────
-me = localStorage.getItem('memio-user') || null;
+me = localStorage.getItem('memyo-user') || null;
 startListening();
 </script>
 </body>
