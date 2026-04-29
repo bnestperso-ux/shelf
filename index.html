@@ -285,62 +285,79 @@ function renderApp(){
   const fsummary=hasF()?'<div class="fsummary">'+tags.join('')+'<span class="freset" onclick="window._resetF()">Effacer</span><span>'+list.length+' resultat'+(list.length>1?'s':'')+'</span></div>':'';
 
   document.getElementById('fab').style.display='flex';
-  document.getElementById('root').innerHTML =
-    '<div class="header">'
-    +'<div class="hrow"><div class="app-logo">Memyo</div>'
-    +'<div class="ubadge" onclick="window._switchUser()"><div class="uav" style="background:'+ac(me)+'">'+me[0].toUpperCase()+'</div><span class="uname">'+me+'</span></div>'
-    +'<button class="btn-add" onclick="openModal()">+ Ajouter</button></div>'
-    +'<div class="sbox"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="#f0f0f0" stroke-width="1.3"/><path d="M10.5 10.5L13 13" stroke="#f0f0f0" stroke-width="1.3" stroke-linecap="round"/></svg>'
-    +'<input id="si" type="search" placeholder="Rechercher..." oninput="renderGrid()" autocomplete="off"></div></div>'
-    +'<div class="filters">'
-    +'<div class="fgrp"><div class="flabel">Vue</div><div class="pills">'
-    +'<button class="pill'+(vf==='mine'?' on':'')+'" onclick="window._setV(\'mine\')">Mes lectures<span class="pn">'+mine+'</span></button>'
-    +'<button class="pill'+(vf==='shared'?' on':'')+'" onclick="window._setV(\'shared\')">Partagees<span class="pn">'+shared+'</span></button>'
-    +'<button class="pill'+(vf==='all'?' on':'')+'" onclick="window._setV(\'all\')">Tout<span class="pn">'+(mine+shared)+'</span></button>'
-    +'</div></div>'
-    +'<div class="fgrp"><div class="flabel">Type'+(tf.size>0?' <span class="factive-badge">'+tf.size+'</span>':'')+'</div><div class="pills">'
-    +TYPES.map(t=>'<button class="pill'+(tf.has(t)?' on':'')+'" onclick="window._toggleTf(\''+t+'\')">'+EM[t]+' '+t+'</button>').join('')
-    +'</div></div>'
-    +'<div class="fgrp"><div class="flabel">Statut'+(sf.size>0?' <span class="factive-badge">'+sf.size+'</span>':'')+'</div><div class="pills">'
-    +Object.entries(ST).map(([k,v])=>'<button class="pill'+(sf.has(k)?' on':'')+'" onclick="window._toggleSf(\''+k+'\')" style="'+(sf.has(k)?'':'border-left:3px solid '+v.c)+'">'+v.l+'</button>').join('')
-    +'</div></div>'
-    +(platforms.length>0?'<div class="fgrp"><div class="flabel">Plateforme'+(pf.size>0?' <span class="factive-badge">'+pf.size+'</span>':'')+'</div><div class="pills">'
-    +platforms.map(p=>'<button class="pill'+(pf.has(p)?' on':'')+'" onclick="window._togglePf(\''+p+'\')">'+p+'</button>').join('')+'</div></div>':'')
-    +fsummary+'</div>'
-    +'<div class="readers-row">'+users.length+' lecteur'+(users.length>1?'s':'')+' : <span>'+users.join(', ')+'</span></div>'
-    +'<div class="grid-wrap"><div class="grid" id="grid"></div></div>'
-    +'<div class="overlay" id="ov" style="display:none" onclick="if(event.target===this)closeModal()">'
-    +'<div class="modal" onclick="event.stopPropagation()">'
-    +'<div class="mhandle"></div>'
-    +'<div class="mhead"><div class="mtitle" id="mt">Nouvelle oeuvre</div><button class="mclose" onclick="closeModal()">×</button></div>'
-    +'<div class="mbody">'
-    +'<div class="field"><label>Titre *</label><input id="ft" type="text" placeholder="ex: One Piece" autocomplete="off" oninput="onTitleInput()"></div>'
-    +'<div class="frow"><div class="field"><label>Type</label><select id="fty">'
-    +TYPES.map(t=>'<option>'+t+'</option>').join('')
-    +'</select></div>'
-    +'<div class="field"><label>Statut</label><select id="fs">'
-    +'<option value="reading">En cours</option><option value="paused">En attente</option>'
-    +'<option value="planned">A decouvrir</option><option value="completed">Termine</option>'
-    +'<option value="dropped">Abandonne</option></select></div></div>'
-    +'<div class="frow"><div class="field"><label>Plateforme</label><input id="fp" type="text" placeholder="Anime-Sama..." autocomplete="off"></div>'
-    +'<div class="field"><label>Saison</label><input id="fsn" type="number" min="0" placeholder="1"></div></div>'
-    +'<div class="frow"><div class="field"><label>Progression</label><input id="fpr" type="number" min="0" placeholder="0"></div>'
-    +'<div class="field"><label>Total</label><input id="fto" type="number" min="0" placeholder=""></div></div>'
-    +'<div class="field"><label>Lien direct</label><input id="fl" type="url" placeholder="https://..." inputmode="url"></div>'
-    +'<div class="cover-field-wrap"><label>Couverture</label>'
-    +'<div class="cover-input-row"><input id="fc" type="url" placeholder="URL de l\'image..." inputmode="url" oninput="previewCover()">'
-    +'<button class="btn-cover-search" onclick="searchCover()">🔍 Chercher</button></div>'
-    +'<img id="cover-preview" class="cover-preview" src="" alt="" onerror="this.style.display=\'none\'">'
-    +'<div class="cover-picker-grid" id="cover-grid"></div>'
-    +'<div class="cover-search-status" id="cover-status"></div>'
-    +'<button class="btn-google" id="btn-google" style="display:none" onclick="openGoogleImages()">↗ Rechercher sur Google Images</button>'
-    +'</div>'
-    +'<div class="field"><label>Notes</label><textarea id="fn" placeholder="Impressions, arc en cours..."></textarea></div>'
-    +'</div>'
-    +'<div class="mactions"><button class="mdel" id="bd" style="display:none" onclick="confirmDelete()">Supprimer</button>'
-    +'<button class="msave" onclick="doSaveWork()">Enregistrer</button></div>'
-    +'</div></div>';
-
+  document.getElementById('root').innerHTML=`
+  <div class="header">
+    <div class="hrow">
+      <div class="app-logo">Memyo</div>
+      <div class="ubadge" onclick="switchUser()"><div class="uav" style="background:${ac(me)}">${me[0].toUpperCase()}</div><span class="uname">${me}</span></div>
+      <button class="btn-add" onclick="openModal()">+ Ajouter</button>
+    </div>
+    <div class="sbox"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="#f0f0f0" stroke-width="1.3"/><path d="M10.5 10.5L13 13" stroke="#f0f0f0" stroke-width="1.3" stroke-linecap="round"/></svg><input id="si" type="search" placeholder="Rechercher…" oninput="renderGrid()" autocomplete="off"></div>
+  </div>
+  <div class="filters">
+    <div class="flabel">Vue</div>
+    <div class="pills">
+      <button class="pill${vf==='mine'?' on':''}" onclick="setV('mine')">Mes lectures<span class="pn">${c.mine}</span></button>
+      <button class="pill${vf==='shared'?' on':''}" onclick="setV('shared')">Partagées<span class="pn">${c.shared}</span></button>
+      <button class="pill${vf==='all'?' on':''}" onclick="setV('all')">Tout<span class="pn">${c.all}</span></button>
+    </div>
+    <div class="flabel" style="margin-top:6px">Type</div>
+    <div class="pills">
+      <button class="pill${tf==='all'?' on':''}" onclick="setT('all')">Tout</button>
+      ${TYPES.map(t=>`<button class="pill${tf===t?' on':''}" onclick="setT('${t}')">${EM[t]} ${t}<span class="pn">${c.bt[t]||0}</span></button>`).join('')}
+    </div>
+    <div class="flabel" style="margin-top:6px">Statut</div>
+    <div class="pills">
+      <button class="pill${sf==='all'?' on':''}" onclick="setSF('all')">Tout</button>
+      ${Object.entries(ST).map(([k,v])=>`<button class="pill${sf===k?' on':''}" onclick="setSF('${k}')" style="${sf===k?'':`border-color:${v.c}22`}"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${v.c};margin-right:4px;vertical-align:middle"></span>${v.l}<span class="pn">${c.bs[k]||0}</span></button>`).join('')}
+    </div>
+    ${getActivePlatforms(vf==='mine'?myW():vf==='shared'?sharedW():[...myW(),...sharedW()]).length>0?`
+    <div class="flabel" style="margin-top:6px">Plateforme</div>
+    <div class="pills">
+      <button class="pill${pf==='all'?' on':''}" onclick="setPF('all')">Toutes</button>
+      ${getActivePlatforms(vf==='mine'?myW():vf==='shared'?sharedW():[...myW(),...sharedW()]).map(p=>`<button class="pill${pf.toLowerCase()===p.toLowerCase()?' on':''}" onclick="setPF('${p}')">${p}<span class="pn">${c.bp[p.toLowerCase()]||0}</span></button>`).join('')}
+    </div>`:''}
+  </div>
+  <div class="readers-row">${rs.length} lecteur${rs.length>1?'s':''} : <span>${rs.join(', ')}</span></div>
+  <div class="grid-wrap"><div class="grid" id="grid"></div></div>
+  <div class="overlay" id="ov" style="display:none" onclick="mClose(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="mhandle"></div>
+      <div class="mhead"><div class="mtitle" id="mt">Nouvelle œuvre</div><button class="mclose" onclick="closeModal()">×</button></div>
+      <div class="mbody">
+        <div class="field"><label>Titre *</label><input id="ft" type="text" placeholder="ex: One Piece" autocomplete="off"></div>
+        <div class="frow">
+          <div class="field"><label>Type</label><select id="fty">${TYPES.map(t=>`<option>${t}</option>`).join('')}</select></div>
+          <div class="field"><label>Statut</label><select id="fs"><option value="reading">En cours</option><option value="paused">En attente</option><option value="planned">À découvrir</option><option value="completed">Terminé</option><option value="dropped">Abandonné</option></select></div>
+        </div>
+        <div class="frow">
+          <div class="field"><label>Plateforme</label><input id="fp" type="text" placeholder="Anime-Sama…" autocomplete="off"></div>
+          <div class="field"><label>Saison</label><input id="fsn" type="number" min="0" placeholder="1"></div>
+        </div>
+        <div class="frow">
+          <div class="field"><label>Progression</label><input id="fpr" type="number" min="0" placeholder="0"></div>
+          <div class="field"><label>Total</label><input id="fto" type="number" min="0" placeholder="—"></div>
+        </div>
+        <div class="field"><label>Lien direct</label><input id="fl" type="url" placeholder="https://…" inputmode="url"></div>
+        <div class="cover-field-wrap">
+          <label>Couverture</label>
+          <div class="cover-input-row">
+            <input id="fc" type="url" placeholder="URL de l'image…" inputmode="url" oninput="previewCover()">
+            <button class="btn-cover-search" onclick="searchCover()">🔍 Chercher</button>
+          </div>
+          <img id="cover-preview" class="cover-preview" src="" alt="preview" onerror="this.style.display='none'">
+          <div class="cover-picker-grid" id="cover-grid"></div>
+          <div class="cover-search-status" id="cover-status"></div>
+          <button class="btn-google" id="btn-google" style="display:none" onclick="openGoogleImages()">↗ Rechercher sur Google Images</button>
+        </div>
+        <div class="field"><label>Notes</label><textarea id="fn" placeholder="Impressions, arc en cours…"></textarea></div>
+      </div>
+      <div class="mactions">
+        <button class="mdel" id="bd" style="display:none" onclick="delWork()">Supprimer</button>
+        <button class="msave" onclick="saveWork()">Enregistrer</button>
+      </div>
+    </div>
+  </div>`;
   renderGrid();
 }
 
