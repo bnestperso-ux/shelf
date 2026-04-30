@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Memyo">
+<meta name="theme-color" content="#0f0f0f">
+<title>Memyo</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{--bg:#0f0f0f;--bg2:#1a1a1a;--bg3:#242424;--bg4:#2e2e2e;--text:#f0f0f0;--text2:#a0a0a0;--text3:#606060;--border:#2a2a2a;--border2:#383838;--green:#1D9E75;--amber:#BA7517;--purple:#7F77DD;--blue:#378ADD;--red:#E24B4A;--r:12px;--rsm:8px;--st:env(safe-area-inset-top);--sb:env(safe-area-inset-bottom)}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100dvh;overflow-x:hidden}
+
+/* LOADING */
+.loading{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100dvh;gap:16px}
+.loading-logo{font-family:'Syne',sans-serif;font-size:32px;font-weight:700;color:var(--text);letter-spacing:-1px}
+.spinner{width:24px;height:24px;border:2px solid var(--border2);border-top-color:var(--text);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.sync-dot{position:fixed;top:calc(var(--st) + 14px);right:16px;width:8px;height:8px;border-radius:50%;background:var(--green);z-index:99;transition:background .3s}
+.sync-dot.syncing{background:var(--amber);animation:pulse 1s infinite}
+.sync-dot.error{background:var(--red)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* SETUP */
+.setup{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100dvh;gap:14px;padding:2rem;text-align:center}
+.logo{font-family:'Syne',sans-serif;font-size:36px;font-weight:700;color:var(--text);letter-spacing:-1px}
+.logo-sub{font-size:14px;color:var(--text3);max-width:260px;line-height:1.6}
+.setup input{width:100%;max-width:300px;padding:13px 16px;border:1px solid var(--border2);border-radius:var(--rsm);background:var(--bg2);font-size:16px;font-family:'DM Sans',sans-serif;color:var(--text);text-align:center;outline:none}
+.setup-btn{width:100%;max-width:300px;padding:13px;background:var(--text);color:var(--bg);border:none;border-radius:var(--rsm);font-size:15px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:pointer}
+.existing-label{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--text3)}
+.existing-pills{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;max-width:300px}
+.epill{padding:5px 14px;border:1px solid var(--border2);border-radius:20px;font-size:13px;color:var(--text2);cursor:pointer;background:var(--bg2)}
+
+/* HEADER */
+.header{position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--border);padding:calc(var(--st) + 10px) 16px 10px}
+.hrow{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.app-logo{font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:var(--text);letter-spacing:-.5px;flex:1}
+.ubadge{display:flex;align-items:center;gap:5px;padding:4px 10px 4px 5px;background:var(--bg2);border:1px solid var(--border2);border-radius:20px;cursor:pointer;flex-shrink:0}
+.uav{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0}
+.uname{font-size:12px;color:var(--text2)}
+.btn-add{background:var(--text);color:var(--bg);border:none;border-radius:var(--rsm);padding:8px 14px;font-size:13px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:pointer;flex-shrink:0}
+.sbox{display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--rsm);padding:0 12px}
+.sbox svg{flex-shrink:0;opacity:.35}
+.sbox input{flex:1;background:transparent;border:none;outline:none;color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;padding:9px 0}
+.sbox input::placeholder{color:var(--text3)}
+
+/* FILTERS */
+.filters{padding:10px 16px 0;background:var(--bg)}
+.fgrp{margin-bottom:2px}
+.flabel{font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin-bottom:5px;font-weight:500;display:flex;align-items:center;gap:6px}
+.factive-badge{font-size:9px;background:var(--green);color:#fff;border-radius:3px;padding:1px 5px;letter-spacing:0;text-transform:none;font-weight:600}
+.pills{display:flex;gap:5px;overflow-x:auto;scrollbar-width:none;padding-bottom:8px}
+.pills::-webkit-scrollbar{display:none}
+.pill{flex-shrink:0;padding:5px 12px;border:1px solid var(--border2);border-radius:20px;font-size:12px;font-family:'DM Sans',sans-serif;cursor:pointer;background:transparent;color:var(--text2);white-space:nowrap;transition:all .15s}
+.pill.on{background:var(--text);color:var(--bg);border-color:var(--text);font-weight:500}
+.pn{font-size:10px;opacity:.5;margin-left:3px}
+.fsummary{font-size:11px;color:var(--text3);padding:0 0 8px;display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.ftag{background:var(--bg3);border:1px solid var(--border2);border-radius:4px;padding:1px 7px;font-size:10px;color:var(--text2)}
+.freset{font-size:10px;color:var(--red);cursor:pointer;text-decoration:underline}
+.readers-row{font-size:11px;color:var(--text3);padding:2px 16px 8px;border-bottom:1px solid var(--border)}
+.readers-row span{color:var(--text2)}
+
+/* GRID */
+.grid-wrap{padding:12px 12px calc(72px + var(--sb))}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:10px}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;cursor:pointer;position:relative;-webkit-user-select:none;user-select:none;transition:border-color .15s}
+.card:active{transform:scale(.98);opacity:.9}
+.card.sc{border-style:dashed;border-color:var(--border2)}
+.cover{width:100%;height:185px;object-fit:cover;display:block;background:var(--bg3)}
+.cph{width:100%;height:185px;display:flex;align-items:center;justify-content:center;font-size:40px}
+.shared-tag{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.65);border-radius:4px;padding:2px 7px;font-size:9px;color:#ccc;backdrop-filter:blur(6px)}
+.add-btn{position:absolute;top:8px;left:8px;background:var(--bg);border:1px solid var(--border2);border-radius:4px;padding:3px 8px;font-size:9px;color:var(--text2);cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap}
+.add-btn:active{background:var(--text);color:var(--bg)}
+.cbody{padding:9px 9px 6px}
+.cmeta{font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin-bottom:2px;font-weight:500}
+.ctitle{font-size:12px;font-weight:500;color:var(--text);line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:33px;margin-bottom:7px}
+.cfoot{display:flex;align-items:center;justify-content:space-between;gap:4px}
+.sdot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.prog{font-size:12px;color:var(--text2);font-weight:500;flex:1;margin-left:4px}
+.inc{width:28px;height:28px;border-radius:50%;border:1px solid var(--border2);background:var(--bg3);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2);flex-shrink:0;line-height:1}
+.inc:active{background:var(--text);color:var(--bg);transform:scale(.88)}
+.inc[disabled]{opacity:.2;cursor:default}
+.cread{display:flex;align-items:center;gap:4px;padding:0 9px 7px}
+.rav{width:14px;height:14px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#fff}
+.rname{font-size:10px;color:var(--text3)}
+.lup{font-size:10px;color:var(--text3);padding:0 9px 7px;text-align:right}
+.snb{display:inline-block;font-size:9px;background:var(--bg3);border:1px solid var(--border2);border-radius:3px;padding:1px 4px;margin-left:3px;vertical-align:middle}
+.empty{grid-column:1/-1;text-align:center;padding:3.5rem 1rem;color:var(--text3);font-size:14px;line-height:2.4}
+
+/* MIGRATION BANNER */
+.migrate-banner{background:var(--amber);color:#fff;padding:10px 16px;font-size:13px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.migrate-btn{background:#fff;color:var(--amber);border:none;border-radius:var(--rsm);padding:6px 14px;font-size:12px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:pointer;flex-shrink:0}
+
+/* FAB */
+.fab{position:fixed;bottom:calc(18px + var(--sb));right:18px;width:54px;height:54px;border-radius:50%;background:var(--text);color:var(--bg);border:none;font-size:26px;cursor:pointer;z-index:30;box-shadow:0 4px 24px rgba(0,0,0,.6);display:none;align-items:center;justify-content:center}
+@media(max-width:500px){.fab{display:flex}.btn-add{display:none}}
+
+/* MODAL */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:50;display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px)}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r) var(--r) 0 0;width:100%;max-height:92dvh;overflow-y:auto;display:flex;flex-direction:column}
+.mhandle{width:36px;height:4px;background:var(--border2);border-radius:2px;margin:12px auto 0;flex-shrink:0}
+.mhead{display:flex;align-items:center;justify-content:space-between;padding:14px 20px 0;flex-shrink:0}
+.mtitle{font-family:'Syne',sans-serif;font-size:17px;font-weight:700;color:var(--text)}
+.mclose{background:var(--bg3);border:none;border-radius:50%;width:28px;height:28px;color:var(--text2);font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.mbody{padding:14px 20px;flex:1;overflow-y:auto}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:10px;color:var(--text3);margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:.5px}
+.field input,.field select,.field textarea{width:100%;padding:10px 12px;border:1px solid var(--border2);border-radius:var(--rsm);background:var(--bg3);font-size:15px;font-family:'DM Sans',sans-serif;color:var(--text);outline:none;-webkit-appearance:none}
+.field select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12'%3E%3Cpath fill='%23606060' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:34px}
+.field textarea{resize:none;min-height:70px;line-height:1.5}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mactions{padding:12px 20px calc(14px + var(--sb));display:flex;gap:10px;border-top:1px solid var(--border);flex-shrink:0;background:var(--bg2)}
+.msave{flex:1;background:var(--text);color:var(--bg);border:none;border-radius:var(--rsm);padding:13px;font-size:15px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:pointer}
+.mdel{background:transparent;border:1px solid var(--red);color:var(--red);border-radius:var(--rsm);padding:13px 14px;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif}
+
+/* COVER PICKER */
+.cover-field-wrap{margin-bottom:12px}
+.cover-field-wrap label{display:block;font-size:10px;color:var(--text3);margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:.5px}
+.cover-input-row{display:flex;gap:6px;align-items:center}
+.cover-input-row input{flex:1;padding:10px 12px;border:1px solid var(--border2);border-radius:var(--rsm);background:var(--bg3);font-size:14px;font-family:'DM Sans',sans-serif;color:var(--text);outline:none}
+.btn-cover-search{flex-shrink:0;padding:9px 12px;border:1px solid var(--border2);border-radius:var(--rsm);background:var(--bg3);color:var(--text2);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap}
+.cover-preview{width:100%;height:110px;object-fit:cover;border-radius:var(--rsm);margin-top:8px;display:none;background:var(--bg3)}
+.cover-picker-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
+.cover-option{width:100%;aspect-ratio:2/3;object-fit:cover;border-radius:6px;cursor:pointer;border:2px solid transparent;transition:border-color .15s}
+.cover-option:hover{border-color:var(--text)}
+.cover-option.selected{border-color:var(--green)}
+.cover-search-status{font-size:11px;color:var(--text3);margin-top:6px;text-align:center;min-height:16px}
+.btn-google{width:100%;margin-top:8px;padding:8px;border:1px dashed var(--border2);border-radius:var(--rsm);background:transparent;color:var(--text3);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;text-align:center}
+.btn-google:hover{border-color:var(--text3);color:var(--text2)}
+
+/* ÉTOILES — MODIFICATION 5 */
+.stars-wrap{display:flex;gap:2px;}
+.star{font-size:22px;cursor:pointer;color:var(--border2);transition:color .1s;line-height:1}
+.star.on{color:var(--amber)}
+.star.hover{color:var(--amber);opacity:.7}
+
+/* TOAST */
+.toast{position:fixed;bottom:calc(22px + var(--sb));left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:9px 20px;border-radius:20px;font-size:12px;font-weight:500;font-family:'DM Sans',sans-serif;z-index:100;opacity:0;transition:opacity .2s;white-space:nowrap;pointer-events:none}
+</style>
+</head>
+<body>
+<div id="root"><div class="loading"><div class="loading-logo">Memyo</div><div class="spinner"></div></div></div>
+<div class="sync-dot" id="sync-dot" title="Synchronisation"></div>
+<button class="fab" id="fab" onclick="openModal()" style="display:none">+</button>
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDI5AE60NL_IuGgBvyocm8jJJvpqvcUYTg",
+  authDomain: "memyo-88e00.firebaseapp.com",
+  databaseURL: "https://memyo-88e00-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "memyo-88e00",
+  storageBucket: "memyo-88e00.firebasestorage.app",
+  messagingSenderId: "722600588853",
+  appId: "1:722600588853:web:0bb00d52328e614fc8e37c"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+// ── CONSTANTS ────────────────────────────────────────────────
+const ST={reading:{l:'En cours',c:'#1D9E75'},paused:{l:'En attente',c:'#BA7517'},planned:{l:'A decouvrir',c:'#7F77DD'},completed:{l:'Termine',c:'#378ADD'},dropped:{l:'Abandonne',c:'#E24B4A'}};
+const TYPES=['Manga','Anime','Webtoon','Webcomic','Novel','Autre'];
+const EM={Manga:'📖',Anime:'🎬',Webtoon:'📱',Webcomic:'🖥',Novel:'📚',Autre:'✨'};
+const COLS=['#1D9E75','#7F77DD','#D85A30','#378ADD','#BA7517','#D4537E','#0F6E56','#533AB7','#C4502A','#2B7A78'];
+
+// ── ÉTAT ────────────────────────────────────────────────────
+let me = null;
+let allData = {};
+let vf='mine', tf=new Set(), sf=new Set(), pf=new Set(), editId=null;
+
+// FIX BUG 2 — Cache des objets carte pour éviter JSON dans les onclick
+const _cardCache = new Map();
+
+// ── UTILS ────────────────────────────────────────────────────
+const ac = n => COLS[(n||'x').split('').reduce((a,c)=>a+c.charCodeAt(0),0) % COLS.length];
+const ph = t => { const c=COLS[t.split('').reduce((a,c)=>a+c.charCodeAt(0),0)%COLS.length]; return 'background:'+c+'18;color:'+c; };
+const ago = d => { const v=Math.floor((Date.now()-new Date(d))/86400000); if(v===0)return"aujourd'hui"; if(v===1)return"hier"; if(v<7)return'il y a '+v+'j'; if(v<30)return'il y a '+Math.floor(v/7)+' sem'; return'il y a '+Math.floor(v/30)+' mois'; };
+const uid = () => Math.random().toString(36).slice(2)+Date.now().toString(36);
+const normT = t => t.toLowerCase().trim().replace(/[\s\-']+/g,' ').trim();
+const hasF = () => tf.size>0||sf.size>0||pf.size>0;
+
+// FIX BUG 3 & 4 — Sanitiser les pseudos (Firebase interdit . # $ / [ ] et espaces)
+const sanitize = n => (n||'').trim().replace(/[.#$/\[\] ]/g, '_');
+
+function toast(m){
+  const t=document.getElementById('toast');
+  t.textContent=m; t.style.opacity='1';
+  clearTimeout(t._t); t._t=setTimeout(()=>t.style.opacity='0',2500);
+}
+
+function setSyncState(state){
+  const dot=document.getElementById('sync-dot');
+  if(!dot)return;
+  dot.className='sync-dot'+(state==='syncing'?' syncing':state==='error'?' error':'');
+}
+
+// ── DATA ACCESSORS ───────────────────────────────────────────
+const myWorks = () => Object.values(allData[me]||{});
+
+function sharedWorks(){
+  const myT = new Set(myWorks().map(w=>normT(w.title)));
+  const out = [];
+  Object.entries(allData).forEach(([u,works])=>{
+    if(u===me)return;
+    Object.values(works).forEach(w=>{
+      if(!myT.has(normT(w.title))) out.push(Object.assign({},w,{_o:u}));
+    });
+  });
+  return out;
+}
+
+function baseList(){
+  if(vf==='mine') return myWorks().map(w=>Object.assign({},w,{_o:me}));
+  if(vf==='shared') return sharedWorks();
+  return myWorks().map(w=>Object.assign({},w,{_o:me})).concat(sharedWorks());
+}
+
+function getPlatforms(){
+  const s=new Set();
+  baseList().forEach(w=>{ if(w.platform&&w.platform.trim()) s.add(w.platform.trim()); });
+  return [...s].sort();
+}
+
+function getList(){
+  let list=baseList();
+  if(tf.size>0) list=list.filter(w=>tf.has(w.type));
+  if(sf.size>0) list=list.filter(w=>sf.has(w.status));
+  if(pf.size>0) list=list.filter(w=>pf.has(w.platform));
+  const q=(document.getElementById('si')||{}).value||'';
+  if(q){const ql=q.toLowerCase(); list=list.filter(w=>w.title.toLowerCase().includes(ql)||(w.platform||'').toLowerCase().includes(ql));}
+  return list.sort((a,b)=>new Date(b.updatedAt)-new Date(a.updatedAt));
+}
+
+// ── FIREBASE SYNC ────────────────────────────────────────────
+function startListening(){
+  setSyncState('syncing');
+  const dataRef = ref(db, 'Memyo');
+  onValue(dataRef, snapshot => {
+    allData = snapshot.val() || {};
+    setSyncState('ok');
+    render();
+  }, err => {
+    console.error(err);
+    setSyncState('error');
+    toast('Erreur de connexion Firebase');
+  });
+}
+
+async function saveWork(workId, workData){
+  setSyncState('syncing');
+  try {
+    await set(ref(db, 'Memyo/'+me+'/'+workId), workData);
+    setSyncState('ok');
+  } catch(e){
+    setSyncState('error');
+    toast('Erreur de sauvegarde');
+  }
+}
+
+async function deleteWork(workId){
+  setSyncState('syncing');
+  try {
+    await remove(ref(db, 'Memyo/'+me+'/'+workId));
+    setSyncState('ok');
+  } catch(e){
+    setSyncState('error');
+    toast('Erreur de suppression');
+  }
+}
+
+// ── FIX BUG 1 — MIGRATION localStorage → Firebase ───────────
+function detectLocalStorageKey(){
+  const candidates = ['Memyo-works','memyo-works','works','Memyo_works','library','memyo'];
+  for(const k of candidates){
+    const v = localStorage.getItem(k);
+    if(!v) continue;
+    try{
+      const parsed = JSON.parse(v);
+      const list = Array.isArray(parsed) ? parsed : Object.values(parsed);
+      if(list.length>0 && list[0].title) return {key:k, data:list};
+    }catch(e){}
+  }
+  for(let i=0;i<localStorage.length;i++){
+    const k = localStorage.key(i);
+    if(k==='Memyo-user') continue;
+    try{
+      const parsed = JSON.parse(localStorage.getItem(k));
+      const list = Array.isArray(parsed) ? parsed : Object.values(parsed||{});
+      if(list.length>0 && list[0] && list[0].title) return {key:k, data:list};
+    }catch(e){}
+  }
+  return null;
+}
+
+function checkMigration(){
+  if(myWorks().length > 0) return;
+  const found = detectLocalStorageKey();
+  if(!found) return;
+  showMigrationBanner(found.key, found.data.length);
+}
+
+function showMigrationBanner(key, count){
+  const old = document.getElementById('migrate-banner');
+  if(old) old.remove();
+  const banner = document.createElement('div');
+  banner.id = 'migrate-banner';
+  banner.className = 'migrate-banner';
+  banner.innerHTML = `
+    <span>📦 ${count} oeuvre${count>1?'s':''} détectée${count>1?'s':''} en local — les migrer vers Firebase ?</span>
+    <div style="display:flex;gap:8px">
+      <button class="migrate-btn" onclick="window._doMigrate('${key}')">Migrer</button>
+      <button class="migrate-btn" style="background:transparent;color:#fff;border:1px solid rgba(255,255,255,.4)" onclick="window._dismissMigrate()">Ignorer</button>
+    </div>`;
+  const header = document.querySelector('.header');
+  if(header) header.insertAdjacentElement('afterend', banner);
+}
+
+window._doMigrate = async function(key){
+  const raw = localStorage.getItem(key);
+  if(!raw){toast('Données introuvables.');return;}
+  let list;
+  try{
+    const parsed = JSON.parse(raw);
+    list = Array.isArray(parsed) ? parsed : Object.values(parsed);
+  }catch(e){toast('Erreur de lecture des données locales.');return;}
+
+  const banner = document.getElementById('migrate-banner');
+  if(banner) banner.innerHTML = '<span>⏳ Migration en cours...</span>';
+
+  setSyncState('syncing');
+  let ok=0, fail=0;
+  for(const w of list){
+    try{
+      const id = w.id || uid();
+      const now = new Date().toISOString();
+      const data = {
+        id,
+        title: w.title||'Sans titre',
+        type: w.type||'Autre',
+        status: w.status||'planned',
+        platform: w.platform||'',
+        season: w.season||0,
+        progress: w.progress||0,
+        total: w.total||null,
+        link: w.link||'',
+        coverUrl: w.coverUrl||'',
+        notes: w.notes||'',
+        createdAt: w.createdAt||now,
+        updatedAt: w.updatedAt||now
+      };
+      await set(ref(db, 'Memyo/'+me+'/'+id), data);
+      ok++;
+    }catch(e){fail++;}
+  }
+  setSyncState('ok');
+  if(fail===0){
+    localStorage.removeItem(key);
+    toast(`✅ ${ok} oeuvre${ok>1?'s':''} migrée${ok>1?'s':''}  avec succès !`);
+  } else {
+    toast(`⚠️ ${ok} migrée${ok>1?'s':''}, ${fail} échouée${fail>1?'s':''}`);
+  }
+  const b = document.getElementById('migrate-banner');
+  if(b) b.remove();
+};
+
+window._dismissMigrate = function(){
+  const b = document.getElementById('migrate-banner');
+  if(b) b.remove();
+};
+
+// ── MODIFICATION 2 — LABEL DYNAMIQUE ────────────────────────
+const RATING_LABELS = {
+  0: '',
+  1: 'Mauvais',
+  2: 'Moyen',
+  3: 'Correct',
+  4: 'Très bon',
+  5: 'Excellent'
+};
+
+const RATING_COLORS = {
+  1: 'var(--red)',
+  2: 'var(--amber)',
+  3: 'var(--amber)',
+  4: 'var(--green)',
+  5: 'var(--green)'
+};
+
+function updateRatingLabel(val){
+  const el = document.getElementById('rating-label');
+  if(!el) return;
+  el.textContent = RATING_LABELS[val] || '';
+  el.style.color = RATING_COLORS[val] || 'var(--text3)';
+}
+
+// ── RENDER ───────────────────────────────────────────────────
+function render(){ me ? renderApp() : renderSetup(); }
+
+function renderSetup(){
+  document.getElementById('fab').style.display='none';
+  const users = Object.keys(allData);
+  document.getElementById('root').innerHTML =
+    '<div class="setup">'
+    +'<div class="logo">Memyo</div>'
+    +'<div class="logo-sub">Bibliothèque partagée en temps réel.<br>Entre ton pseudo pour commencer.</div>'
+    +'<input id="sn" type="text" placeholder="Ton pseudo..." maxlength="20" autocomplete="off" onkeydown="if(event.key===\'Enter\')window._go()">'
+    +'<button class="setup-btn" onclick="window._go()">Accéder à ma bibliothèque</button>'
+    +(users.length ? '<div class="existing-label">Déjà présents</div><div class="existing-pills">'+users.map(u=>'<div class="epill" onclick="window._jump(\''+u+'\')">'+u+'</div>').join('')+'</div>' : '')
+    +'</div>';
+}
+
+function renderApp(){
+  const mine=myWorks().length, shared=sharedWorks().length;
+  const platforms=getPlatforms();
+  const list=getList();
+  const users=Object.keys(allData);
+
+  const tags=[...[...tf].map(t=>'<span class="ftag">'+EM[t]+' '+t+'</span>'), ...[...sf].map(s=>'<span class="ftag">'+ST[s].l+'</span>'), ...[...pf].map(p=>'<span class="ftag">'+p+'</span>')];
+  const fsummary=hasF()?'<div class="fsummary">'+tags.join('')+'<span class="freset" onclick="window._resetF()">Effacer</span><span>'+list.length+' résultat'+(list.length>1?'s':'')+'</span></div>':'';
+
+  document.getElementById('fab').style.display='flex';
+  document.getElementById('root').innerHTML =
+    '<div class="header">'
+    +'<div class="hrow"><div class="app-logo">Memyo</div>'
+    +'<div class="ubadge" onclick="window._switchUser()"><div class="uav" style="background:'+ac(me)+'">'+me[0].toUpperCase()+'</div><span class="uname">'+me+'</span></div>'
+    +'<button class="btn-add" onclick="openModal()">+ Ajouter</button></div>'
+    +'<div class="sbox"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="#f0f0f0" stroke-width="1.3"/><path d="M10.5 10.5L13 13" stroke="#f0f0f0" stroke-width="1.3" stroke-linecap="round"/></svg>'
+    +'<input id="si" type="search" placeholder="Rechercher..." oninput="renderGrid()" autocomplete="off"></div></div>'
+    +'<div class="filters">'
+    +'<div class="fgrp"><div class="flabel">Vue</div><div class="pills">'
+    +'<button class="pill'+(vf==='mine'?' on':'')+'" onclick="window._setV(\'mine\')">Mes lectures<span class="pn">'+mine+'</span></button>'
+    +'<button class="pill'+(vf==='shared'?' on':'')+'" onclick="window._setV(\'shared\')">Partagées<span class="pn">'+shared+'</span></button>'
+    +'<button class="pill'+(vf==='all'?' on':'')+'" onclick="window._setV(\'all\')">Tout<span class="pn">'+(mine+shared)+'</span></button>'
+    +'</div></div>'
+    +'<div class="fgrp"><div class="flabel">Type'+(tf.size>0?' <span class="factive-badge">'+tf.size+'</span>':'')+'</div><div class="pills">'
+    +TYPES.map(t=>'<button class="pill'+(tf.has(t)?' on':'')+'" onclick="window._toggleTf(\''+t+'\')">'+EM[t]+' '+t+'</button>').join('')
+    +'</div></div>'
+    +'<div class="fgrp"><div class="flabel">Statut'+(sf.size>0?' <span class="factive-badge">'+sf.size+'</span>':'')+'</div><div class="pills">'
+    +Object.entries(ST).map(([k,v])=>'<button class="pill'+(sf.has(k)?' on':'')+'" onclick="window._toggleSf(\''+k+'\')" style="'+(sf.has(k)?'':'border-left:3px solid '+v.c)+'">'+v.l+'</button>').join('')
+    +'</div></div>'
+    +(platforms.length>0?'<div class="fgrp"><div class="flabel">Plateforme'+(pf.size>0?' <span class="factive-badge">'+pf.size+'</span>':'')+'</div><div class="pills">'
+    +platforms.map(p=>'<button class="pill'+(pf.has(p)?' on':'')+'" onclick="window._togglePf(\''+p+'\')">'+p+'</button>').join('')+'</div></div>':'')
+    +fsummary+'</div>'
+    +'<div class="readers-row">'+users.length+' lecteur'+(users.length>1?'s':'')+' : <span>'+users.join(', ')+'</span></div>'
+    +'<div class="grid-wrap"><div class="grid" id="grid"></div></div>'
+    +'<div class="overlay" id="ov" style="display:none" onclick="if(event.target===this)closeModal()">'
+    +'<div class="modal" onclick="event.stopPropagation()">'
+    +'<div class="mhandle"></div>'
+    +'<div class="mhead"><div class="mtitle" id="mt">Nouvelle oeuvre</div><button class="mclose" onclick="closeModal()">×</button></div>'
+    +'<div class="mbody">'
+    +'<div class="field"><label>Titre *</label><input id="ft" type="text" placeholder="ex: One Piece" autocomplete="off" oninput="onTitleInput()"></div>'
+    +'<div class="field"><label>Auteur</label><input id="fau" type="text" placeholder="ex: Eiichiro Oda" autocomplete="off"></div>'
+    +'<div class="frow"><div class="field"><label>Type</label><select id="fty">'
+    +TYPES.map(t=>'<option>'+t+'</option>').join('')
+    +'</select></div>'
+    +'<div class="field"><label>Statut de l\'œuvre</label><select id="fws" onchange="toggleTotal()">'
+    +'<option value="ongoing">En cours</option><option value="finished">Terminée</option>'
+    +'</select></div></div>'
+    +'<div class="field" id="total-field" style="display:none"><label>Nombre total d\'épisodes / chapitres</label><input id="fto" type="number" min="0" placeholder="ex: 1200"></div>'
+    // MODIFICATION 1 — Statut de lecture + Avis sur une seule ligne
+    +'<div style="display:flex;align-items:flex-end;gap:10px;margin-bottom:12px">'
+    +'<div class="field" style="flex:1;min-width:0;margin-bottom:0"><label>Statut de lecture</label><select id="fs">'
+    +'<option value="reading">En cours</option>'
+    +'<option value="paused">En attente</option>'
+    +'<option value="planned">A decouvrir</option>'
+    +'<option value="completed">Terminé</option>'
+    +'<option value="dropped">Abandonné</option>'
+    +'</select></div>'
+    +'<div class="field" style="flex-shrink:0;margin-bottom:0"><label>Avis</label>'
+    +'<div style="display:flex;align-items:center;gap:6px;padding:6px 0">'
+    +'<div class="stars-wrap" id="stars-wrap">'
+    +[1,2,3,4,5].map(i=>'<span class="star" data-v="'+i+'" onclick="setRating('+i+')" onmouseover="hoverRating('+i+')" onmouseout="unhoverRating()">★</span>').join('')
+    +'</div>'
+    +'<span id="rating-label" style="font-size:11px;min-width:55px;color:var(--text3)"></span>'
+    +'</div>'
+    +'<input type="hidden" id="frating" value="0"></div>'
+    +'</div>'
+    // FIN MODIFICATION 1
+    +'<div class="frow"><div class="field"><label>Saison</label><input id="fsn" type="number" min="0" placeholder="1"></div>'
+    +'<div class="field"><label>Épisode / Chapitre</label><input id="fpr" type="number" min="0" placeholder="0"></div></div>'
+    +'<div class="field"><label>Lien direct</label><input id="fl" type="url" placeholder="https://..." inputmode="url"></div>'
+    +'<div class="cover-field-wrap"><label>Couverture</label>'
+    +'<div class="cover-input-row"><input id="fc" type="url" placeholder="URL de l\'image..." inputmode="url" oninput="previewCover()">'
+    +'<button class="btn-cover-search" onclick="searchCover()">🔍 Chercher</button></div>'
+    +'<img id="cover-preview" class="cover-preview" src="" alt="" onerror="this.style.display=\'none\'">'
+    +'<div class="cover-picker-grid" id="cover-grid"></div>'
+    +'<div class="cover-search-status" id="cover-status"></div>'
+    +'<button class="btn-google" id="btn-google" style="display:none" onclick="openGoogleImages()">↗ Rechercher sur Google Images</button>'
+    +'</div>'
+    +'<div class="field"><label>Notes</label><textarea id="fn" placeholder="Impressions, arc en cours..."></textarea></div>'
+    +'</div>'
+    +'<div class="mactions"><button class="mdel" id="bd" style="display:none" onclick="confirmDelete()">Supprimer</button>'
+    +'<button class="msave" onclick="doSaveWork()">Enregistrer</button></div>'
+    +'</div></div>';
+
+  renderGrid();
+
+  // FIX BUG 1 — vérifier s'il faut proposer une migration
+  checkMigration();
+}
+
+function renderGrid(){
+  _cardCache.clear();
+
+  const list=getList();
+  const g=document.getElementById('grid'); if(!g)return;
+  if(!list.length){
+    g.innerHTML='<div class="empty">📚<br>'
+      +(hasF()?'Aucun résultat — <span style="color:var(--red);cursor:pointer;text-decoration:underline" onclick="window._resetF()">effacer les filtres</span>'
+      :vf==='mine'&&myWorks().length===0?'Aucune lecture — appuie sur + pour commencer':'Aucun résultat')
+      +'</div>';
+    return;
+  }
+  g.innerHTML=list.map(w=>{
+    const isMe = sanitize(w._o) === sanitize(me);
+    const s=ST[w.status]||ST.planned, p=w.progress||0;
+    const epLabel = w.type==='Anime' ? (p===0?'—':'ép. '+p) : (p===0?'—':'ch. '+p);
+    const wsLabel = w.workStatus==='finished'
+      ? (w.total ? 'Terminée · '+(w.type==='Anime'?'ép':'ch')+'. '+w.total : 'Terminée')
+      : 'En cours';
+    const wsColor = w.workStatus==='finished' ? 'var(--blue)' : 'var(--green)';
+    const progDisplay = isMe ? epLabel : wsLabel;
+    const progStyle = isMe ? '' : 'color:'+wsColor+';font-size:10px';
+    const sn=w.season>0?'<span class="snb">S'+w.season+'</span>':'';
+    const ratingStars=isMe&&w.rating>0?'<div style="font-size:10px;color:var(--amber);letter-spacing:1px;padding:0 9px 4px">'+'★'.repeat(w.rating)+'<span style="color:var(--text3)">'+'★'.repeat(5-w.rating)+'</span></div>':'';
+    const cv=w.coverUrl
+      ?'<img class="cover" src="'+w.coverUrl+'" onerror="this.style.display=\'none\';this.nextSibling.style.display=\'flex\'" loading="lazy"><div class="cph" style="display:none;'+ph(w.title)+'">'+(EM[w.type]||'✨')+'</div>'
+      :'<div class="cph" style="'+ph(w.title)+'">'+(EM[w.type]||'✨')+'</div>';
+    const inc=isMe
+      ?'<button class="inc" onclick="event.stopPropagation();doInc(\''+w.id+'\')" title="+1">+</button>'
+      :'<button class="inc" disabled>·</button>';
+    const bottom=isMe
+      ?'<div class="lup">'+ago(w.updatedAt)+'</div>'
+      :'<div class="cread"><div class="rav" style="background:'+ac(w._o)+'">'+((w._o||'?')[0].toUpperCase())+'</div><span class="rname">'+(w._o||'')+'</span></div>';
+    const stag=isMe?'':'<div class="shared-tag">Partagée</div>';
+
+    const cacheKey = w.id+'__'+(w._o||'');
+    _cardCache.set(cacheKey, w);
+
+    const abtn=isMe?'':'<button class="add-btn" onclick="event.stopPropagation();addToMine(\''+cacheKey+'\')">+ Mes lectures</button>';
+    const click=isMe?'openModal(\''+w.id+'\')':'';
+
+    return '<div class="card'+(isMe?'':' sc')+'" onclick="'+click+'">'+cv+stag+abtn
+      +'<div class="cbody"><div class="cmeta">'+w.type+(w.author?' · '+w.author:'')+sn+'</div>'
+      +'<div class="ctitle">'+w.title+'</div>'
+      +'<div class="cfoot"><span class="sdot" style="background:'+s.c+'"></span><span class="prog" style="'+progStyle+'">'+progDisplay+'</span>'+inc+'</div>'
+      +'</div>'+ratingStars+bottom+'</div>';
+  }).join('');
+}
+
+// ── ACTIONS ──────────────────────────────────────────────────
+window._go = function(){
+  const v=(document.getElementById('sn').value||'').trim();
+  if(!v){toast('Entre un pseudo !');return;}
+  me=sanitize(v);
+  localStorage.setItem('Memyo-user',me);
+  render();
+};
+window._jump = function(n){me=sanitize(n);localStorage.setItem('Memyo-user',me);render();};
+window._switchUser = function(){me=null;localStorage.removeItem('Memyo-user');render();};
+window._setV = function(v){vf=v;renderApp();};
+window._toggleTf = function(t){tf.has(t)?tf.delete(t):tf.add(t);renderApp();};
+window._toggleSf = function(s){sf.has(s)?sf.delete(s):sf.add(s);renderApp();};
+window._togglePf = function(p){pf.has(p)?pf.delete(p):pf.add(p);renderApp();};
+window._resetF = function(){tf=new Set();sf=new Set();pf=new Set();renderApp();};
+
+window.renderGrid = renderGrid;
+
+async function addToMine(cacheKey){
+  const w = _cardCache.get(cacheKey);
+  if(!w){toast('Erreur : oeuvre introuvable');return;}
+  const now=new Date().toISOString();
+  const id=uid();
+  const n={id,title:w.title,author:w.author||'',type:w.type,status:'planned',workStatus:w.workStatus||'ongoing',season:0,progress:0,total:w.total||null,rating:0,link:w.link||'',coverUrl:w.coverUrl||'',notes:'',createdAt:now,updatedAt:now};
+  await saveWork(id,n);
+  toast('"'+w.title+'" ajouté à tes lectures !');
+}
+window.addToMine = addToMine;
+
+window.toggleTotal = function(){
+  const ws=document.getElementById('fws');
+  const tf=document.getElementById('total-field');
+  if(ws&&tf) tf.style.display=ws.value==='finished'?'block':'none';
+};
+
+function renderStars(val){
+  document.querySelectorAll('.star').forEach(s=>{
+    s.classList.toggle('on', parseInt(s.dataset.v)<=val);
+  });
+}
+
+// MODIFICATION 3 — setRating appelle updateRatingLabel
+window.setRating = function(v){
+  document.getElementById('frating').value = v;
+  renderStars(v);
+  updateRatingLabel(v);
+};
+
+window.hoverRating = function(v){ document.querySelectorAll('.star').forEach(s=>{ s.classList.toggle('hover', parseInt(s.dataset.v)<=v); }); };
+window.unhoverRating = function(){ document.querySelectorAll('.star').forEach(s=>s.classList.remove('hover')); renderStars(parseInt(document.getElementById('frating').value)||0); };
+
+window.doInc = async function(id){
+  const works = allData[me]||{};
+  const w = works[id] || Object.values(works).find(x=>x.id===id);
+  if(!w){ toast('Oeuvre introuvable'); return; }
+  const updated=Object.assign({},w,{progress:(w.progress||0)+1,updatedAt:new Date().toISOString()});
+  await saveWork(updated.id,updated);
+  toast('+1 → '+(w.type==='Anime'?'ép':'ch')+'. '+updated.progress);
+};
+
+// ── MODAL ────────────────────────────────────────────────────
+window.openModal = function(id){
+  editId=id||null;
+  const w=id?(allData[me]||{})[id]:null;
+  const ov=document.getElementById('ov'); if(!ov)return;
+  document.getElementById('mt').textContent=w?w.title.slice(0,30)+(w.title.length>30?'...':''):'Nouvelle oeuvre';
+  document.getElementById('ft').value=w?w.title:'';
+  document.getElementById('fau').value=w?(w.author||''):'';
+  document.getElementById('fty').value=w?w.type:'Manga';
+  document.getElementById('fws').value=w?(w.workStatus||'ongoing'):'ongoing';
+  toggleTotal();
+  document.getElementById('fto').value=w&&w.total!=null?w.total:'';
+  document.getElementById('fs').value=w?w.status:'reading';
+  // Rating
+  const ratingVal = w ? (w.rating||0) : 0;
+  document.getElementById('frating').value = ratingVal;
+  renderStars(ratingVal);
+  // MODIFICATION 4 — init du label dans openModal
+  updateRatingLabel(ratingVal);
+  document.getElementById('fsn').value=w?(w.season||''):'';
+  document.getElementById('fpr').value=w&&w.progress!=null?w.progress:'';
+  document.getElementById('fl').value=w?(w.link||''):'';
+  document.getElementById('fc').value=w?(w.coverUrl||''):'';
+  document.getElementById('fn').value=w?(w.notes||''):'';
+  document.getElementById('bd').style.display=w?'block':'none';
+  document.getElementById('cover-grid').innerHTML='';
+  document.getElementById('cover-status').textContent='';
+  document.getElementById('btn-google').style.display='none';
+  const prev=document.getElementById('cover-preview');
+  if(w?.coverUrl){prev.src=w.coverUrl;prev.style.display='block';}
+  else prev.style.display='none';
+  ov.style.display='flex';
+  document.body.style.overflow='hidden';
+};
+
+window.closeModal = function(){
+  const ov=document.getElementById('ov'); if(ov)ov.style.display='none';
+  document.body.style.overflow=''; editId=null;
+};
+
+window.doSaveWork = async function(){
+  const title=document.getElementById('ft').value.trim();
+  if(!title){alert('Titre obligatoire.');return;}
+  const now=new Date().toISOString();
+  const id=editId||uid();
+  const existing=(allData[me]||{})[id]||{};
+  const data={
+    id, title,
+    author:document.getElementById('fau').value.trim(),
+    type:document.getElementById('fty').value,
+    status:document.getElementById('fs').value,
+    season:parseInt(document.getElementById('fsn').value)||0,
+    progress:parseInt(document.getElementById('fpr').value)||0,
+    workStatus:document.getElementById('fws').value,
+    total:document.getElementById('fws').value==='finished'?(parseInt(document.getElementById('fto').value)||null):null,
+    rating:parseInt(document.getElementById('frating').value)||0,
+    link:document.getElementById('fl').value.trim(),
+    coverUrl:document.getElementById('fc').value.trim(),
+    notes:document.getElementById('fn').value.trim(),
+    createdAt:existing.createdAt||now,
+    updatedAt:now
+  };
+  await saveWork(id,data);
+  window.closeModal();
+};
+
+window.confirmDelete = async function(){
+  if(!editId)return;
+  const w=(allData[me]||{})[editId];
+  if(!confirm('Supprimer "'+( w?w.title:'cette oeuvre')+'" ?'))return;
+  await deleteWork(editId);
+  window.closeModal();
+};
+
+// ── COVER SEARCH ─────────────────────────────────────────────
+window.onTitleInput = function(){
+  const grid=document.getElementById('cover-grid');
+  if(grid)grid.innerHTML='';
+};
+
+window.previewCover = function(){
+  const url=document.getElementById('fc').value.trim();
+  const prev=document.getElementById('cover-preview');
+  if(url){prev.src=url;prev.style.display='block';}
+  else prev.style.display='none';
+};
+
+window.searchCover = async function(){
+  const title=document.getElementById('ft').value.trim();
+  const type=document.getElementById('fty').value;
+  if(!title){toast('Entre d\'abord le titre');return;}
+  const status=document.getElementById('cover-status');
+  const grid=document.getElementById('cover-grid');
+  const btnG=document.getElementById('btn-google');
+  if(type==='Manga'||type==='Anime'){
+    status.textContent='Recherche en cours...';
+    grid.innerHTML=''; btnG.style.display='none';
+    try{
+      const mediaType=type==='Anime'?'ANIME':'MANGA';
+      const query=`query($s:String,$t:MediaType){Page(perPage:6){media(search:$s,type:$t){title{romaji}coverImage{large}}}}`;
+      const res=await fetch('https://graphql.anilist.co',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Accept':'application/json'},
+        body:JSON.stringify({query,variables:{s:title,t:mediaType}})
+      });
+      const data=await res.json();
+      const results=data?.data?.Page?.media||[];
+      if(!results.length){status.textContent='Aucun résultat AniList.';btnG.style.display='block';return;}
+      status.textContent='Clique sur une cover pour la sélectionner';
+      grid.innerHTML=results.map(m=>`<img class="cover-option" src="${m.coverImage.large}" title="${m.title.romaji}" onclick="window.selectCover('${m.coverImage.large}',this)" onerror="this.style.display='none'">`).join('');
+    }catch(e){status.textContent='Erreur réseau. Essaie Google Images.';btnG.style.display='block';}
+  } else {
+    status.textContent=''; grid.innerHTML=''; btnG.style.display='block';
+  }
+};
+
+window.selectCover = function(url,el){
+  document.getElementById('fc').value=url;
+  document.querySelectorAll('.cover-option').forEach(i=>i.classList.remove('selected'));
+  el.classList.add('selected');
+  const prev=document.getElementById('cover-preview');
+  prev.src=url; prev.style.display='block';
+  document.getElementById('cover-status').textContent='✅ Cover sélectionnée';
+};
+
+window.openGoogleImages = function(){
+  const title=document.getElementById('ft').value.trim()||'manga cover';
+  const type=document.getElementById('fty').value;
+  window.open('https://www.google.com/search?q='+encodeURIComponent(title+' '+type+' cover')+'&tbm=isch','_blank');
+};
+
+// ── INIT ─────────────────────────────────────────────────────
+me = sanitize(localStorage.getItem('Memyo-user') || '');
+if(!me) me = null;
+startListening();
+</script>
+</body>
+</html>
