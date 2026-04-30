@@ -131,6 +131,12 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
 .btn-google{width:100%;margin-top:8px;padding:8px;border:1px dashed var(--border2);border-radius:var(--rsm);background:transparent;color:var(--text3);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;text-align:center}
 .btn-google:hover{border-color:var(--text3);color:var(--text2)}
 
+/* ÉTOILES */
+.stars-wrap{display:flex;gap:4px;margin-top:2px}
+.star{font-size:26px;cursor:pointer;color:var(--border2);transition:color .1s;line-height:1}
+.star.on{color:var(--amber)}
+.star.hover{color:var(--amber);opacity:.7}
+
 /* TOAST */
 .toast{position:fixed;bottom:calc(22px + var(--sb));left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:9px 20px;border-radius:20px;font-size:12px;font-weight:500;font-family:'DM Sans',sans-serif;z-index:100;opacity:0;transition:opacity .2s;white-space:nowrap;pointer-events:none}
 </style>
@@ -431,20 +437,25 @@ function renderApp(){
     +'<div class="mhead"><div class="mtitle" id="mt">Nouvelle oeuvre</div><button class="mclose" onclick="closeModal()">×</button></div>'
     +'<div class="mbody">'
     +'<div class="field"><label>Titre *</label><input id="ft" type="text" placeholder="ex: One Piece" autocomplete="off" oninput="onTitleInput()"></div>'
+    +'<div class="field"><label>Auteur</label><input id="fau" type="text" placeholder="ex: Eiichiro Oda" autocomplete="off"></div>'
     +'<div class="frow"><div class="field"><label>Type</label><select id="fty">'
     +TYPES.map(t=>'<option>'+t+'</option>').join('')
     +'</select></div>'
-    +'<div class="field"><label>Statut</label><select id="fs">'
-    +'<option value="reading">En cours</option><option value="paused">En attente</option>'
-    +'<option value="planned">A découvrir</option><option value="completed">Terminé</option>'
-    +'<option value="dropped">Abandonné</option></select></div></div>'
-    +'<div class="frow"><div class="field"><label>Plateforme</label><input id="fp" type="text" placeholder="Anime-Sama..." autocomplete="off"></div>'
-    +'<div class="field"><label>Saison</label><input id="fsn" type="number" min="0" placeholder="1"></div></div>'
-    +'<div class="frow"><div class="field"><label>Épisode / Chapitre</label><input id="fpr" type="number" min="0" placeholder="0"></div>'
     +'<div class="field"><label>Statut de l\'œuvre</label><select id="fws" onchange="toggleTotal()">'
     +'<option value="ongoing">En cours</option><option value="finished">Terminée</option>'
     +'</select></div></div>'
     +'<div class="field" id="total-field" style="display:none"><label>Nombre total d\'épisodes / chapitres</label><input id="fto" type="number" min="0" placeholder="ex: 1200"></div>'
+    +'<div class="field"><label>Statut de lecture</label><select id="fs">'
+    +'<option value="reading">En cours</option><option value="paused">En attente</option>'
+    +'<option value="planned">A découvrir</option><option value="completed">Terminé</option>'
+    +'<option value="dropped">Abandonné</option></select></div>'
+    +'<div class="field"><label>Avis</label>'
+    +'<div class="stars-wrap" id="stars-wrap">'
+    +[1,2,3,4,5].map(i=>'<span class="star" data-v="'+i+'" onclick="setRating('+i+')" onmouseover="hoverRating('+i+')" onmouseout="unhoverRating()">★</span>').join('')
+    +'</div>'
+    +'<input type="hidden" id="frating" value="0"></div>'
+    +'<div class="frow"><div class="field"><label>Saison</label><input id="fsn" type="number" min="0" placeholder="1"></div>'
+    +'<div class="field"><label>Épisode / Chapitre</label><input id="fpr" type="number" min="0" placeholder="0"></div></div>'
     +'<div class="field"><label>Lien direct</label><input id="fl" type="url" placeholder="https://..." inputmode="url"></div>'
     +'<div class="cover-field-wrap"><label>Couverture</label>'
     +'<div class="cover-input-row"><input id="fc" type="url" placeholder="URL de l\'image..." inputmode="url" oninput="previewCover()">'
@@ -493,6 +504,7 @@ function renderGrid(){
     const progDisplay = isMe ? epLabel : wsLabel;
     const progStyle = isMe ? '' : 'color:'+wsColor+';font-size:10px';
     const sn=w.season>0?'<span class="snb">S'+w.season+'</span>':'';
+    const ratingStars=isMe&&w.rating>0?'<div style="font-size:10px;color:var(--amber);letter-spacing:1px;padding:0 9px 4px">'+'★'.repeat(w.rating)+'<span style="color:var(--text3)">'+'★'.repeat(5-w.rating)+'</span></div>':'';
     const cv=w.coverUrl
       ?'<img class="cover" src="'+w.coverUrl+'" onerror="this.style.display=\'none\';this.nextSibling.style.display=\'flex\'" loading="lazy"><div class="cph" style="display:none;'+ph(w.title)+'">'+(EM[w.type]||'✨')+'</div>'
       :'<div class="cph" style="'+ph(w.title)+'">'+(EM[w.type]||'✨')+'</div>';
@@ -513,10 +525,10 @@ function renderGrid(){
     const click=isMe?'openModal(\''+w.id+'\')':'';
 
     return '<div class="card'+(isMe?'':' sc')+'" onclick="'+click+'">'+cv+stag+abtn
-      +'<div class="cbody"><div class="cmeta">'+w.type+(w.platform?' · '+w.platform:'')+sn+'</div>'
+      +'<div class="cbody"><div class="cmeta">'+w.type+(w.author?' · '+w.author:'')+sn+'</div>'
       +'<div class="ctitle">'+w.title+'</div>'
       +'<div class="cfoot"><span class="sdot" style="background:'+s.c+'"></span><span class="prog" style="'+progStyle+'">'+progDisplay+'</span>'+inc+'</div>'
-      +'</div>'+bottom+'</div>';
+      +'</div>'+ratingStars+bottom+'</div>';
   }).join('');
 }
 
@@ -546,7 +558,7 @@ async function addToMine(cacheKey){
   if(!w){toast('Erreur : oeuvre introuvable');return;}
   const now=new Date().toISOString();
   const id=uid();
-  const n={id,title:w.title,type:w.type,status:'planned',workStatus:w.workStatus||'ongoing',platform:'',season:0,progress:0,total:w.total||null,link:w.link||'',coverUrl:w.coverUrl||'',notes:'',createdAt:now,updatedAt:now};
+  const n={id,title:w.title,author:w.author||'',type:w.type,status:'planned',workStatus:w.workStatus||'ongoing',season:0,progress:0,total:w.total||null,rating:0,link:w.link||'',coverUrl:w.coverUrl||'',notes:'',createdAt:now,updatedAt:now};
   await saveWork(id,n);
   toast('"'+w.title+'" ajouté à tes lectures !');
 }
@@ -558,15 +570,26 @@ window.toggleTotal = function(){
   if(ws&&tf) tf.style.display=ws.value==='finished'?'block':'none';
 };
 
-async function doInc(id){
-  // Cherche dans allData[me] en parcourant toutes les valeurs (robuste au sanitize)
+function renderStars(val){
+  document.querySelectorAll('.star').forEach(s=>{
+    s.classList.toggle('on', parseInt(s.dataset.v)<=val);
+  });
+}
+window.setRating = function(v){
+  document.getElementById('frating').value=v;
+  renderStars(v);
+};
+window.hoverRating = function(v){ document.querySelectorAll('.star').forEach(s=>{ s.classList.toggle('hover', parseInt(s.dataset.v)<=v); }); };
+window.unhoverRating = function(){ document.querySelectorAll('.star').forEach(s=>s.classList.remove('hover')); renderStars(parseInt(document.getElementById('frating').value)||0); };
+
+window.doInc = async function(id){
   const works = allData[me]||{};
   const w = works[id] || Object.values(works).find(x=>x.id===id);
-  if(!w)return;
+  if(!w){ toast('Oeuvre introuvable'); return; }
   const updated=Object.assign({},w,{progress:(w.progress||0)+1,updatedAt:new Date().toISOString()});
   await saveWork(updated.id,updated);
   toast('+1 → '+(w.type==='Anime'?'ép':'ch')+'. '+updated.progress);
-}
+};
 
 // ── MODAL ────────────────────────────────────────────────────
 window.openModal = function(id){
@@ -575,16 +598,18 @@ window.openModal = function(id){
   const ov=document.getElementById('ov'); if(!ov)return;
   document.getElementById('mt').textContent=w?w.title.slice(0,30)+(w.title.length>30?'...':''):'Nouvelle oeuvre';
   document.getElementById('ft').value=w?w.title:'';
+  document.getElementById('fau').value=w?(w.author||''):'';
   document.getElementById('fty').value=w?w.type:'Manga';
-  document.getElementById('fs').value=w?w.status:'reading';
-  document.getElementById('fp').value=w?(w.platform||''):'';
-  document.getElementById('fsn').value=w?(w.season||''):'';
-  document.getElementById('fpr').value=w&&w.progress!=null?w.progress:'';
   // Statut de l'œuvre (donnée partagée)
-  const fws=document.getElementById('fws');
-  fws.value=w?(w.workStatus||'ongoing'):'ongoing';
+  document.getElementById('fws').value=w?(w.workStatus||'ongoing'):'ongoing';
   toggleTotal();
   document.getElementById('fto').value=w&&w.total!=null?w.total:'';
+  document.getElementById('fs').value=w?w.status:'reading';
+  // Rating
+  document.getElementById('frating').value=w?(w.rating||0):0;
+  renderStars(w?w.rating||0:0);
+  document.getElementById('fsn').value=w?(w.season||''):'';
+  document.getElementById('fpr').value=w&&w.progress!=null?w.progress:'';
   document.getElementById('fl').value=w?(w.link||''):'';
   document.getElementById('fc').value=w?(w.coverUrl||''):'';
   document.getElementById('fn').value=w?(w.notes||''):'';
@@ -612,13 +637,14 @@ window.doSaveWork = async function(){
   const existing=(allData[me]||{})[id]||{};
   const data={
     id, title,
+    author:document.getElementById('fau').value.trim(),
     type:document.getElementById('fty').value,
     status:document.getElementById('fs').value,
-    platform:document.getElementById('fp').value.trim(),
     season:parseInt(document.getElementById('fsn').value)||0,
     progress:parseInt(document.getElementById('fpr').value)||0,
     workStatus:document.getElementById('fws').value,
     total:document.getElementById('fws').value==='finished'?(parseInt(document.getElementById('fto').value)||null):null,
+    rating:parseInt(document.getElementById('frating').value)||0,
     link:document.getElementById('fl').value.trim(),
     coverUrl:document.getElementById('fc').value.trim(),
     notes:document.getElementById('fn').value.trim(),
