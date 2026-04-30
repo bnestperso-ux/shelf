@@ -131,9 +131,9 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
 .btn-google{width:100%;margin-top:8px;padding:8px;border:1px dashed var(--border2);border-radius:var(--rsm);background:transparent;color:var(--text3);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;text-align:center}
 .btn-google:hover{border-color:var(--text3);color:var(--text2)}
 
-/* ÉTOILES */
-.stars-wrap{display:flex;gap:4px;margin-top:2px}
-.star{font-size:26px;cursor:pointer;color:var(--border2);transition:color .1s;line-height:1}
+/* ÉTOILES — MODIFICATION 5 */
+.stars-wrap{display:flex;gap:2px;}
+.star{font-size:22px;cursor:pointer;color:var(--border2);transition:color .1s;line-height:1}
 .star.on{color:var(--amber)}
 .star.hover{color:var(--amber);opacity:.7}
 
@@ -277,19 +277,16 @@ async function deleteWork(workId){
 
 // ── FIX BUG 1 — MIGRATION localStorage → Firebase ───────────
 function detectLocalStorageKey(){
-  // Cherche toutes les clés localStorage qui pourraient contenir des oeuvres
   const candidates = ['Memyo-works','memyo-works','works','Memyo_works','library','memyo'];
   for(const k of candidates){
     const v = localStorage.getItem(k);
     if(!v) continue;
     try{
       const parsed = JSON.parse(v);
-      // Valide : tableau ou objet avec des entrées qui ont un "title"
       const list = Array.isArray(parsed) ? parsed : Object.values(parsed);
       if(list.length>0 && list[0].title) return {key:k, data:list};
     }catch(e){}
   }
-  // Scan générique de toutes les clés
   for(let i=0;i<localStorage.length;i++){
     const k = localStorage.key(i);
     if(k==='Memyo-user') continue;
@@ -303,16 +300,13 @@ function detectLocalStorageKey(){
 }
 
 function checkMigration(){
-  // N'affiche la bannière que si des données locales existent
-  // et que l'utilisateur n'a rien sur Firebase
-  if(myWorks().length > 0) return; // déjà des données sur Firebase
+  if(myWorks().length > 0) return;
   const found = detectLocalStorageKey();
   if(!found) return;
   showMigrationBanner(found.key, found.data.length);
 }
 
 function showMigrationBanner(key, count){
-  // Retire bannière existante si elle existe
   const old = document.getElementById('migrate-banner');
   if(old) old.remove();
   const banner = document.createElement('div');
@@ -367,7 +361,7 @@ window._doMigrate = async function(key){
   }
   setSyncState('ok');
   if(fail===0){
-    localStorage.removeItem(key); // Nettoie le local seulement si tout a réussi
+    localStorage.removeItem(key);
     toast(`✅ ${ok} oeuvre${ok>1?'s':''} migrée${ok>1?'s':''}  avec succès !`);
   } else {
     toast(`⚠️ ${ok} migrée${ok>1?'s':''}, ${fail} échouée${fail>1?'s':''}`);
@@ -380,6 +374,31 @@ window._dismissMigrate = function(){
   const b = document.getElementById('migrate-banner');
   if(b) b.remove();
 };
+
+// ── MODIFICATION 2 — LABEL DYNAMIQUE ────────────────────────
+const RATING_LABELS = {
+  0: '',
+  1: 'Mauvais',
+  2: 'Moyen',
+  3: 'Correct',
+  4: 'Très bon',
+  5: 'Excellent'
+};
+
+const RATING_COLORS = {
+  1: 'var(--red)',
+  2: 'var(--amber)',
+  3: 'var(--amber)',
+  4: 'var(--green)',
+  5: 'var(--green)'
+};
+
+function updateRatingLabel(val){
+  const el = document.getElementById('rating-label');
+  if(!el) return;
+  el.textContent = RATING_LABELS[val] || '';
+  el.style.color = RATING_COLORS[val] || 'var(--text3)';
+}
 
 // ── RENDER ───────────────────────────────────────────────────
 function render(){ me ? renderApp() : renderSetup(); }
@@ -445,15 +464,25 @@ function renderApp(){
     +'<option value="ongoing">En cours</option><option value="finished">Terminée</option>'
     +'</select></div></div>'
     +'<div class="field" id="total-field" style="display:none"><label>Nombre total d\'épisodes / chapitres</label><input id="fto" type="number" min="0" placeholder="ex: 1200"></div>'
-    +'<div class="field"><label>Statut de lecture</label><select id="fs">'
-    +'<option value="reading">En cours</option><option value="paused">En attente</option>'
-    +'<option value="planned">A découvrir</option><option value="completed">Terminé</option>'
-    +'<option value="dropped">Abandonné</option></select></div>'
-    +'<div class="field"><label>Avis</label>'
+    // MODIFICATION 1 — Statut de lecture + Avis sur une seule ligne
+    +'<div style="display:flex;align-items:flex-end;gap:10px;margin-bottom:12px">'
+    +'<div class="field" style="flex:1;min-width:0;margin-bottom:0"><label>Statut de lecture</label><select id="fs">'
+    +'<option value="reading">En cours</option>'
+    +'<option value="paused">En attente</option>'
+    +'<option value="planned">A decouvrir</option>'
+    +'<option value="completed">Terminé</option>'
+    +'<option value="dropped">Abandonné</option>'
+    +'</select></div>'
+    +'<div class="field" style="flex-shrink:0;margin-bottom:0"><label>Avis</label>'
+    +'<div style="display:flex;align-items:center;gap:6px;padding:6px 0">'
     +'<div class="stars-wrap" id="stars-wrap">'
     +[1,2,3,4,5].map(i=>'<span class="star" data-v="'+i+'" onclick="setRating('+i+')" onmouseover="hoverRating('+i+')" onmouseout="unhoverRating()">★</span>').join('')
     +'</div>'
+    +'<span id="rating-label" style="font-size:11px;min-width:55px;color:var(--text3)"></span>'
+    +'</div>'
     +'<input type="hidden" id="frating" value="0"></div>'
+    +'</div>'
+    // FIN MODIFICATION 1
     +'<div class="frow"><div class="field"><label>Saison</label><input id="fsn" type="number" min="0" placeholder="1"></div>'
     +'<div class="field"><label>Épisode / Chapitre</label><input id="fpr" type="number" min="0" placeholder="0"></div></div>'
     +'<div class="field"><label>Lien direct</label><input id="fl" type="url" placeholder="https://..." inputmode="url"></div>'
@@ -478,7 +507,7 @@ function renderApp(){
 }
 
 function renderGrid(){
-  _cardCache.clear(); // FIX BUG 2 — reset du cache à chaque rendu
+  _cardCache.clear();
 
   const list=getList();
   const g=document.getElementById('grid'); if(!g)return;
@@ -490,17 +519,13 @@ function renderGrid(){
     return;
   }
   g.innerHTML=list.map(w=>{
-    // FIX BUG 4 — comparaison robuste avec sanitize
     const isMe = sanitize(w._o) === sanitize(me);
     const s=ST[w.status]||ST.planned, p=w.progress||0;
-    // Label personnel (épisode/chapitre) — affiché uniquement sur mes vignettes
     const epLabel = w.type==='Anime' ? (p===0?'—':'ép. '+p) : (p===0?'—':'ch. '+p);
-    // Statut de l'œuvre (partagé) — "En cours" ou "Terminée"
     const wsLabel = w.workStatus==='finished'
       ? (w.total ? 'Terminée · '+(w.type==='Anime'?'ép':'ch')+'. '+w.total : 'Terminée')
       : 'En cours';
     const wsColor = w.workStatus==='finished' ? 'var(--blue)' : 'var(--green)';
-    // Ce qu'on affiche dans .prog : épisode perso si c'est moi, statut œuvre si partagé
     const progDisplay = isMe ? epLabel : wsLabel;
     const progStyle = isMe ? '' : 'color:'+wsColor+';font-size:10px';
     const sn=w.season>0?'<span class="snb">S'+w.season+'</span>':'';
@@ -516,11 +541,9 @@ function renderGrid(){
       :'<div class="cread"><div class="rav" style="background:'+ac(w._o)+'">'+((w._o||'?')[0].toUpperCase())+'</div><span class="rname">'+(w._o||'')+'</span></div>';
     const stag=isMe?'':'<div class="shared-tag">Partagée</div>';
 
-    // FIX BUG 2 — on stocke dans le cache et on passe uniquement la clé
     const cacheKey = w.id+'__'+(w._o||'');
     _cardCache.set(cacheKey, w);
 
-    // FIX BUG 2 — bouton utilise la clé du cache, pas un JSON inline
     const abtn=isMe?'':'<button class="add-btn" onclick="event.stopPropagation();addToMine(\''+cacheKey+'\')">+ Mes lectures</button>';
     const click=isMe?'openModal(\''+w.id+'\')':'';
 
@@ -533,15 +556,13 @@ function renderGrid(){
 }
 
 // ── ACTIONS ──────────────────────────────────────────────────
-// FIX BUG 3 — sanitize à l'entrée du pseudo
 window._go = function(){
   const v=(document.getElementById('sn').value||'').trim();
   if(!v){toast('Entre un pseudo !');return;}
-  me=sanitize(v); // ← sanitisé
+  me=sanitize(v);
   localStorage.setItem('Memyo-user',me);
   render();
 };
-// FIX BUG 3 — sanitize aussi pour les pseudos existants
 window._jump = function(n){me=sanitize(n);localStorage.setItem('Memyo-user',me);render();};
 window._switchUser = function(){me=null;localStorage.removeItem('Memyo-user');render();};
 window._setV = function(v){vf=v;renderApp();};
@@ -552,7 +573,6 @@ window._resetF = function(){tf=new Set();sf=new Set();pf=new Set();renderApp();}
 
 window.renderGrid = renderGrid;
 
-// FIX BUG 2 — addToMine reçoit une clé de cache, pas un objet JSON
 async function addToMine(cacheKey){
   const w = _cardCache.get(cacheKey);
   if(!w){toast('Erreur : oeuvre introuvable');return;}
@@ -575,10 +595,14 @@ function renderStars(val){
     s.classList.toggle('on', parseInt(s.dataset.v)<=val);
   });
 }
+
+// MODIFICATION 3 — setRating appelle updateRatingLabel
 window.setRating = function(v){
-  document.getElementById('frating').value=v;
+  document.getElementById('frating').value = v;
   renderStars(v);
+  updateRatingLabel(v);
 };
+
 window.hoverRating = function(v){ document.querySelectorAll('.star').forEach(s=>{ s.classList.toggle('hover', parseInt(s.dataset.v)<=v); }); };
 window.unhoverRating = function(){ document.querySelectorAll('.star').forEach(s=>s.classList.remove('hover')); renderStars(parseInt(document.getElementById('frating').value)||0); };
 
@@ -600,14 +624,16 @@ window.openModal = function(id){
   document.getElementById('ft').value=w?w.title:'';
   document.getElementById('fau').value=w?(w.author||''):'';
   document.getElementById('fty').value=w?w.type:'Manga';
-  // Statut de l'œuvre (donnée partagée)
   document.getElementById('fws').value=w?(w.workStatus||'ongoing'):'ongoing';
   toggleTotal();
   document.getElementById('fto').value=w&&w.total!=null?w.total:'';
   document.getElementById('fs').value=w?w.status:'reading';
   // Rating
-  document.getElementById('frating').value=w?(w.rating||0):0;
-  renderStars(w?w.rating||0:0);
+  const ratingVal = w ? (w.rating||0) : 0;
+  document.getElementById('frating').value = ratingVal;
+  renderStars(ratingVal);
+  // MODIFICATION 4 — init du label dans openModal
+  updateRatingLabel(ratingVal);
   document.getElementById('fsn').value=w?(w.season||''):'';
   document.getElementById('fpr').value=w&&w.progress!=null?w.progress:'';
   document.getElementById('fl').value=w?(w.link||''):'';
@@ -721,7 +747,6 @@ window.openGoogleImages = function(){
 };
 
 // ── INIT ─────────────────────────────────────────────────────
-// FIX BUG 3 — sanitize aussi à la restauration depuis localStorage
 me = sanitize(localStorage.getItem('Memyo-user') || '');
 if(!me) me = null;
 startListening();
