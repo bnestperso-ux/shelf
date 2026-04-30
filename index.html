@@ -90,6 +90,10 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
 .snb{display:inline-block;font-size:9px;background:var(--bg3);border:1px solid var(--border2);border-radius:3px;padding:1px 4px;margin-left:3px;vertical-align:middle}
 .empty{grid-column:1/-1;text-align:center;padding:3.5rem 1rem;color:var(--text3);font-size:14px;line-height:2.4}
 
+/* MIGRATION BANNER */
+.migrate-banner{background:var(--amber);color:#fff;padding:10px 16px;font-size:13px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.migrate-btn{background:#fff;color:var(--amber);border:none;border-radius:var(--rsm);padding:6px 14px;font-size:12px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:pointer;flex-shrink:0}
+
 /* FAB */
 .fab{position:fixed;bottom:calc(18px + var(--sb));right:18px;width:54px;height:54px;border-radius:50%;background:var(--text);color:var(--bg);border:none;font-size:26px;cursor:pointer;z-index:30;box-shadow:0 4px 24px rgba(0,0,0,.6);display:none;align-items:center;justify-content:center}
 @media(max-width:500px){.fab{display:flex}.btn-add{display:none}}
@@ -139,7 +143,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getDatabase, ref, onValue, set, update, remove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
+import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDI5AE60NL_IuGgBvyocm8jJJvpqvcUYTg",
@@ -160,18 +164,24 @@ const TYPES=['Manga','Anime','Webtoon','Webcomic','Novel','Autre'];
 const EM={Manga:'📖',Anime:'🎬',Webtoon:'📱',Webcomic:'🖥',Novel:'📚',Autre:'✨'};
 const COLS=['#1D9E75','#7F77DD','#D85A30','#378ADD','#BA7517','#D4537E','#0F6E56','#533AB7','#C4502A','#2B7A78'];
 
-// ── STATE ────────────────────────────────────────────────────
+// ── ÉTAT ────────────────────────────────────────────────────
 let me = null;
-let allData = {};     // {username: {workId: workObj}}
+let allData = {};
 let vf='mine', tf=new Set(), sf=new Set(), pf=new Set(), editId=null;
 
+// FIX BUG 2 — Cache des objets carte pour éviter JSON dans les onclick
+const _cardCache = new Map();
+
 // ── UTILS ────────────────────────────────────────────────────
-const ac = n => COLS[n.split('').reduce((a,c)=>a+c.charCodeAt(0),0) % COLS.length];
+const ac = n => COLS[(n||'x').split('').reduce((a,c)=>a+c.charCodeAt(0),0) % COLS.length];
 const ph = t => { const c=COLS[t.split('').reduce((a,c)=>a+c.charCodeAt(0),0)%COLS.length]; return 'background:'+c+'18;color:'+c; };
 const ago = d => { const v=Math.floor((Date.now()-new Date(d))/86400000); if(v===0)return"aujourd'hui"; if(v===1)return"hier"; if(v<7)return'il y a '+v+'j'; if(v<30)return'il y a '+Math.floor(v/7)+' sem'; return'il y a '+Math.floor(v/30)+' mois'; };
 const uid = () => Math.random().toString(36).slice(2)+Date.now().toString(36);
 const normT = t => t.toLowerCase().trim().replace(/[\s\-']+/g,' ').trim();
 const hasF = () => tf.size>0||sf.size>0||pf.size>0;
+
+// FIX BUG 3 & 4 — Sanitiser les pseudos (Firebase interdit . # $ / [ ] et espaces)
+const sanitize = n => (n||'').trim().replace(/[.#$/\[\] ]/g, '_');
 
 function toast(m){
   const t=document.getElementById('toast');
@@ -259,6 +269,112 @@ async function deleteWork(workId){
   }
 }
 
+// ── FIX BUG 1 — MIGRATION localStorage → Firebase ───────────
+function detectLocalStorageKey(){
+  // Cherche toutes les clés localStorage qui pourraient contenir des oeuvres
+  const candidates = ['Memyo-works','memyo-works','works','Memyo_works','library','memyo'];
+  for(const k of candidates){
+    const v = localStorage.getItem(k);
+    if(!v) continue;
+    try{
+      const parsed = JSON.parse(v);
+      // Valide : tableau ou objet avec des entrées qui ont un "title"
+      const list = Array.isArray(parsed) ? parsed : Object.values(parsed);
+      if(list.length>0 && list[0].title) return {key:k, data:list};
+    }catch(e){}
+  }
+  // Scan générique de toutes les clés
+  for(let i=0;i<localStorage.length;i++){
+    const k = localStorage.key(i);
+    if(k==='Memyo-user') continue;
+    try{
+      const parsed = JSON.parse(localStorage.getItem(k));
+      const list = Array.isArray(parsed) ? parsed : Object.values(parsed||{});
+      if(list.length>0 && list[0] && list[0].title) return {key:k, data:list};
+    }catch(e){}
+  }
+  return null;
+}
+
+function checkMigration(){
+  // N'affiche la bannière que si des données locales existent
+  // et que l'utilisateur n'a rien sur Firebase
+  if(myWorks().length > 0) return; // déjà des données sur Firebase
+  const found = detectLocalStorageKey();
+  if(!found) return;
+  showMigrationBanner(found.key, found.data.length);
+}
+
+function showMigrationBanner(key, count){
+  // Retire bannière existante si elle existe
+  const old = document.getElementById('migrate-banner');
+  if(old) old.remove();
+  const banner = document.createElement('div');
+  banner.id = 'migrate-banner';
+  banner.className = 'migrate-banner';
+  banner.innerHTML = `
+    <span>📦 ${count} oeuvre${count>1?'s':''} détectée${count>1?'s':''} en local — les migrer vers Firebase ?</span>
+    <div style="display:flex;gap:8px">
+      <button class="migrate-btn" onclick="window._doMigrate('${key}')">Migrer</button>
+      <button class="migrate-btn" style="background:transparent;color:#fff;border:1px solid rgba(255,255,255,.4)" onclick="window._dismissMigrate()">Ignorer</button>
+    </div>`;
+  const header = document.querySelector('.header');
+  if(header) header.insertAdjacentElement('afterend', banner);
+}
+
+window._doMigrate = async function(key){
+  const raw = localStorage.getItem(key);
+  if(!raw){toast('Données introuvables.');return;}
+  let list;
+  try{
+    const parsed = JSON.parse(raw);
+    list = Array.isArray(parsed) ? parsed : Object.values(parsed);
+  }catch(e){toast('Erreur de lecture des données locales.');return;}
+
+  const banner = document.getElementById('migrate-banner');
+  if(banner) banner.innerHTML = '<span>⏳ Migration en cours...</span>';
+
+  setSyncState('syncing');
+  let ok=0, fail=0;
+  for(const w of list){
+    try{
+      const id = w.id || uid();
+      const now = new Date().toISOString();
+      const data = {
+        id,
+        title: w.title||'Sans titre',
+        type: w.type||'Autre',
+        status: w.status||'planned',
+        platform: w.platform||'',
+        season: w.season||0,
+        progress: w.progress||0,
+        total: w.total||null,
+        link: w.link||'',
+        coverUrl: w.coverUrl||'',
+        notes: w.notes||'',
+        createdAt: w.createdAt||now,
+        updatedAt: w.updatedAt||now
+      };
+      await set(ref(db, 'Memyo/'+me+'/'+id), data);
+      ok++;
+    }catch(e){fail++;}
+  }
+  setSyncState('ok');
+  if(fail===0){
+    localStorage.removeItem(key); // Nettoie le local seulement si tout a réussi
+    toast(`✅ ${ok} oeuvre${ok>1?'s':''} migrée${ok>1?'s':''}  avec succès !`);
+  } else {
+    toast(`⚠️ ${ok} migrée${ok>1?'s':''}, ${fail} échouée${fail>1?'s':''}`);
+  }
+  const b = document.getElementById('migrate-banner');
+  if(b) b.remove();
+};
+
+window._dismissMigrate = function(){
+  const b = document.getElementById('migrate-banner');
+  if(b) b.remove();
+};
+
 // ── RENDER ───────────────────────────────────────────────────
 function render(){ me ? renderApp() : renderSetup(); }
 
@@ -268,10 +384,10 @@ function renderSetup(){
   document.getElementById('root').innerHTML =
     '<div class="setup">'
     +'<div class="logo">Memyo</div>'
-    +'<div class="logo-sub">Bibliotheque partagee en temps reel.<br>Entre ton pseudo pour commencer.</div>'
+    +'<div class="logo-sub">Bibliothèque partagée en temps réel.<br>Entre ton pseudo pour commencer.</div>'
     +'<input id="sn" type="text" placeholder="Ton pseudo..." maxlength="20" autocomplete="off" onkeydown="if(event.key===\'Enter\')window._go()">'
-    +'<button class="setup-btn" onclick="window._go()">Acceder a ma bibliotheque</button>'
-    +(users.length ? '<div class="existing-label">Deja presents</div><div class="existing-pills">'+users.map(u=>'<div class="epill" onclick="window._jump(\''+u+'\')">'+u+'</div>').join('')+'</div>' : '')
+    +'<button class="setup-btn" onclick="window._go()">Accéder à ma bibliothèque</button>'
+    +(users.length ? '<div class="existing-label">Déjà présents</div><div class="existing-pills">'+users.map(u=>'<div class="epill" onclick="window._jump(\''+u+'\')">'+u+'</div>').join('')+'</div>' : '')
     +'</div>';
 }
 
@@ -282,7 +398,7 @@ function renderApp(){
   const users=Object.keys(allData);
 
   const tags=[...[...tf].map(t=>'<span class="ftag">'+EM[t]+' '+t+'</span>'), ...[...sf].map(s=>'<span class="ftag">'+ST[s].l+'</span>'), ...[...pf].map(p=>'<span class="ftag">'+p+'</span>')];
-  const fsummary=hasF()?'<div class="fsummary">'+tags.join('')+'<span class="freset" onclick="window._resetF()">Effacer</span><span>'+list.length+' resultat'+(list.length>1?'s':'')+'</span></div>':'';
+  const fsummary=hasF()?'<div class="fsummary">'+tags.join('')+'<span class="freset" onclick="window._resetF()">Effacer</span><span>'+list.length+' résultat'+(list.length>1?'s':'')+'</span></div>':'';
 
   document.getElementById('fab').style.display='flex';
   document.getElementById('root').innerHTML =
@@ -295,7 +411,7 @@ function renderApp(){
     +'<div class="filters">'
     +'<div class="fgrp"><div class="flabel">Vue</div><div class="pills">'
     +'<button class="pill'+(vf==='mine'?' on':'')+'" onclick="window._setV(\'mine\')">Mes lectures<span class="pn">'+mine+'</span></button>'
-    +'<button class="pill'+(vf==='shared'?' on':'')+'" onclick="window._setV(\'shared\')">Partagees<span class="pn">'+shared+'</span></button>'
+    +'<button class="pill'+(vf==='shared'?' on':'')+'" onclick="window._setV(\'shared\')">Partagées<span class="pn">'+shared+'</span></button>'
     +'<button class="pill'+(vf==='all'?' on':'')+'" onclick="window._setV(\'all\')">Tout<span class="pn">'+(mine+shared)+'</span></button>'
     +'</div></div>'
     +'<div class="fgrp"><div class="flabel">Type'+(tf.size>0?' <span class="factive-badge">'+tf.size+'</span>':'')+'</div><div class="pills">'
@@ -320,8 +436,8 @@ function renderApp(){
     +'</select></div>'
     +'<div class="field"><label>Statut</label><select id="fs">'
     +'<option value="reading">En cours</option><option value="paused">En attente</option>'
-    +'<option value="planned">A decouvrir</option><option value="completed">Termine</option>'
-    +'<option value="dropped">Abandonne</option></select></div></div>'
+    +'<option value="planned">A découvrir</option><option value="completed">Terminé</option>'
+    +'<option value="dropped">Abandonné</option></select></div></div>'
     +'<div class="frow"><div class="field"><label>Plateforme</label><input id="fp" type="text" placeholder="Anime-Sama..." autocomplete="off"></div>'
     +'<div class="field"><label>Saison</label><input id="fsn" type="number" min="0" placeholder="1"></div></div>'
     +'<div class="frow"><div class="field"><label>Progression</label><input id="fpr" type="number" min="0" placeholder="0"></div>'
@@ -342,20 +458,27 @@ function renderApp(){
     +'</div></div>';
 
   renderGrid();
+
+  // FIX BUG 1 — vérifier s'il faut proposer une migration
+  checkMigration();
 }
 
 function renderGrid(){
+  _cardCache.clear(); // FIX BUG 2 — reset du cache à chaque rendu
+
   const list=getList();
   const g=document.getElementById('grid'); if(!g)return;
   if(!list.length){
     g.innerHTML='<div class="empty">📚<br>'
-      +(hasF()?'Aucun resultat — <span style="color:var(--red);cursor:pointer;text-decoration:underline" onclick="window._resetF()">effacer les filtres</span>'
-      :vf==='mine'&&myWorks().length===0?'Aucune lecture — appuie sur + pour commencer':'Aucun resultat')
+      +(hasF()?'Aucun résultat — <span style="color:var(--red);cursor:pointer;text-decoration:underline" onclick="window._resetF()">effacer les filtres</span>'
+      :vf==='mine'&&myWorks().length===0?'Aucune lecture — appuie sur + pour commencer':'Aucun résultat')
       +'</div>';
     return;
   }
   g.innerHTML=list.map(w=>{
-    const s=ST[w.status], p=w.progress||0, isMe=w._o===me;
+    // FIX BUG 4 — comparaison robuste avec sanitize
+    const isMe = sanitize(w._o) === sanitize(me);
+    const s=ST[w.status]||ST.planned, p=w.progress||0;
     const label=w.type==='Anime'?(p===0?'—':'ep. '+p):'ch. '+p;
     const sn=w.season>0?'<span class="snb">S'+w.season+'</span>':'';
     const cv=w.coverUrl
@@ -366,11 +489,17 @@ function renderGrid(){
       :'<button class="inc" disabled>·</button>';
     const bottom=isMe
       ?'<div class="lup">'+ago(w.updatedAt)+'</div>'
-      :'<div class="cread"><div class="rav" style="background:'+ac(w._o)+'">'+w._o[0].toUpperCase()+'</div><span class="rname">'+w._o+'</span></div>';
-    const stag=isMe?'':'<div class="shared-tag">Partagee</div>';
-    const wj=JSON.stringify(w).replace(/\\/g,'\\\\').replace(/"/g,'&quot;');
-    const abtn=isMe?'':'<button class="add-btn" onclick="event.stopPropagation();addToMine('+wj+')">+ Mes lectures</button>';
+      :'<div class="cread"><div class="rav" style="background:'+ac(w._o)+'">'+((w._o||'?')[0].toUpperCase())+'</div><span class="rname">'+(w._o||'')+'</span></div>';
+    const stag=isMe?'':'<div class="shared-tag">Partagée</div>';
+
+    // FIX BUG 2 — on stocke dans le cache et on passe uniquement la clé
+    const cacheKey = w.id+'__'+(w._o||'');
+    _cardCache.set(cacheKey, w);
+
+    // FIX BUG 2 — bouton utilise la clé du cache, pas un JSON inline
+    const abtn=isMe?'':'<button class="add-btn" onclick="event.stopPropagation();addToMine(\''+cacheKey+'\')">+ Mes lectures</button>';
     const click=isMe?'openModal(\''+w.id+'\')':'';
+
     return '<div class="card'+(isMe?'':' sc')+'" onclick="'+click+'">'+cv+stag+abtn
       +'<div class="cbody"><div class="cmeta">'+w.type+(w.platform?' · '+w.platform:'')+sn+'</div>'
       +'<div class="ctitle">'+w.title+'</div>'
@@ -380,14 +509,16 @@ function renderGrid(){
 }
 
 // ── ACTIONS ──────────────────────────────────────────────────
+// FIX BUG 3 — sanitize à l'entrée du pseudo
 window._go = function(){
   const v=(document.getElementById('sn').value||'').trim();
   if(!v){toast('Entre un pseudo !');return;}
-  me=v;
+  me=sanitize(v); // ← sanitisé
   localStorage.setItem('Memyo-user',me);
   render();
 };
-window._jump = function(n){me=n;localStorage.setItem('Memyo-user',me);render();};
+// FIX BUG 3 — sanitize aussi pour les pseudos existants
+window._jump = function(n){me=sanitize(n);localStorage.setItem('Memyo-user',me);render();};
 window._switchUser = function(){me=null;localStorage.removeItem('Memyo-user');render();};
 window._setV = function(v){vf=v;renderApp();};
 window._toggleTf = function(t){tf.has(t)?tf.delete(t):tf.add(t);renderApp();};
@@ -397,13 +528,17 @@ window._resetF = function(){tf=new Set();sf=new Set();pf=new Set();renderApp();}
 
 window.renderGrid = renderGrid;
 
-async function addToMine(w){
+// FIX BUG 2 — addToMine reçoit une clé de cache, pas un objet JSON
+async function addToMine(cacheKey){
+  const w = _cardCache.get(cacheKey);
+  if(!w){toast('Erreur : oeuvre introuvable');return;}
   const now=new Date().toISOString();
   const id=uid();
   const n={id,title:w.title,type:w.type,status:w.status,platform:w.platform||'',season:w.season||0,progress:w.progress||0,total:w.total||null,link:w.link||'',coverUrl:w.coverUrl||'',notes:w.notes||'',createdAt:now,updatedAt:now};
   await saveWork(id,n);
-  toast('"'+w.title+'" ajouté à tes lectures');
+  toast('"'+w.title+'" ajouté à tes lectures !');
 }
+window.addToMine = addToMine;
 
 async function doInc(id){
   const w=(allData[me]||{})[id]; if(!w)return;
@@ -478,7 +613,6 @@ window.confirmDelete = async function(){
 
 // ── COVER SEARCH ─────────────────────────────────────────────
 window.onTitleInput = function(){
-  // reset cover picker when title changes
   const grid=document.getElementById('cover-grid');
   if(grid)grid.innerHTML='';
 };
@@ -510,10 +644,10 @@ window.searchCover = async function(){
       });
       const data=await res.json();
       const results=data?.data?.Page?.media||[];
-      if(!results.length){status.textContent='Aucun resultat AniList.';btnG.style.display='block';return;}
-      status.textContent='Clique sur une cover pour la selectionner';
+      if(!results.length){status.textContent='Aucun résultat AniList.';btnG.style.display='block';return;}
+      status.textContent='Clique sur une cover pour la sélectionner';
       grid.innerHTML=results.map(m=>`<img class="cover-option" src="${m.coverImage.large}" title="${m.title.romaji}" onclick="window.selectCover('${m.coverImage.large}',this)" onerror="this.style.display='none'">`).join('');
-    }catch(e){status.textContent='Erreur reseau. Essaie Google Images.';btnG.style.display='block';}
+    }catch(e){status.textContent='Erreur réseau. Essaie Google Images.';btnG.style.display='block';}
   } else {
     status.textContent=''; grid.innerHTML=''; btnG.style.display='block';
   }
@@ -525,7 +659,7 @@ window.selectCover = function(url,el){
   el.classList.add('selected');
   const prev=document.getElementById('cover-preview');
   prev.src=url; prev.style.display='block';
-  document.getElementById('cover-status').textContent='✅ Cover selectionnee';
+  document.getElementById('cover-status').textContent='✅ Cover sélectionnée';
 };
 
 window.openGoogleImages = function(){
@@ -535,7 +669,9 @@ window.openGoogleImages = function(){
 };
 
 // ── INIT ─────────────────────────────────────────────────────
-me = localStorage.getItem('Memyo-user') || null;
+// FIX BUG 3 — sanitize aussi à la restauration depuis localStorage
+me = sanitize(localStorage.getItem('Memyo-user') || '');
+if(!me) me = null;
 startListening();
 </script>
 </body>
