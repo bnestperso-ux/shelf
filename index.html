@@ -440,8 +440,11 @@ function renderApp(){
     +'<option value="dropped">Abandonné</option></select></div></div>'
     +'<div class="frow"><div class="field"><label>Plateforme</label><input id="fp" type="text" placeholder="Anime-Sama..." autocomplete="off"></div>'
     +'<div class="field"><label>Saison</label><input id="fsn" type="number" min="0" placeholder="1"></div></div>'
-    +'<div class="frow"><div class="field"><label>Progression</label><input id="fpr" type="number" min="0" placeholder="0"></div>'
-    +'<div class="field"><label>Total</label><input id="fto" type="number" min="0" placeholder=""></div></div>'
+    +'<div class="frow"><div class="field"><label>Épisode / Chapitre</label><input id="fpr" type="number" min="0" placeholder="0"></div>'
+    +'<div class="field"><label>Statut de l\'œuvre</label><select id="fws" onchange="toggleTotal()">'
+    +'<option value="ongoing">En cours</option><option value="finished">Terminée</option>'
+    +'</select></div></div>'
+    +'<div class="field" id="total-field" style="display:none"><label>Nombre total d\'épisodes / chapitres</label><input id="fto" type="number" min="0" placeholder="ex: 1200"></div>'
     +'<div class="field"><label>Lien direct</label><input id="fl" type="url" placeholder="https://..." inputmode="url"></div>'
     +'<div class="cover-field-wrap"><label>Couverture</label>'
     +'<div class="cover-input-row"><input id="fc" type="url" placeholder="URL de l\'image..." inputmode="url" oninput="previewCover()">'
@@ -479,7 +482,16 @@ function renderGrid(){
     // FIX BUG 4 — comparaison robuste avec sanitize
     const isMe = sanitize(w._o) === sanitize(me);
     const s=ST[w.status]||ST.planned, p=w.progress||0;
-    const label=w.type==='Anime'?(p===0?'—':'ep. '+p):'ch. '+p;
+    // Label personnel (épisode/chapitre) — affiché uniquement sur mes vignettes
+    const epLabel = w.type==='Anime' ? (p===0?'—':'ép. '+p) : (p===0?'—':'ch. '+p);
+    // Statut de l'œuvre (partagé) — "En cours" ou "Terminée"
+    const wsLabel = w.workStatus==='finished'
+      ? (w.total ? 'Terminée · '+(w.type==='Anime'?'ép':'ch')+'. '+w.total : 'Terminée')
+      : 'En cours';
+    const wsColor = w.workStatus==='finished' ? 'var(--blue)' : 'var(--green)';
+    // Ce qu'on affiche dans .prog : épisode perso si c'est moi, statut œuvre si partagé
+    const progDisplay = isMe ? epLabel : wsLabel;
+    const progStyle = isMe ? '' : 'color:'+wsColor+';font-size:10px';
     const sn=w.season>0?'<span class="snb">S'+w.season+'</span>':'';
     const cv=w.coverUrl
       ?'<img class="cover" src="'+w.coverUrl+'" onerror="this.style.display=\'none\';this.nextSibling.style.display=\'flex\'" loading="lazy"><div class="cph" style="display:none;'+ph(w.title)+'">'+(EM[w.type]||'✨')+'</div>'
@@ -503,7 +515,7 @@ function renderGrid(){
     return '<div class="card'+(isMe?'':' sc')+'" onclick="'+click+'">'+cv+stag+abtn
       +'<div class="cbody"><div class="cmeta">'+w.type+(w.platform?' · '+w.platform:'')+sn+'</div>'
       +'<div class="ctitle">'+w.title+'</div>'
-      +'<div class="cfoot"><span class="sdot" style="background:'+s.c+'"></span><span class="prog">'+label+'</span>'+inc+'</div>'
+      +'<div class="cfoot"><span class="sdot" style="background:'+s.c+'"></span><span class="prog" style="'+progStyle+'">'+progDisplay+'</span>'+inc+'</div>'
       +'</div>'+bottom+'</div>';
   }).join('');
 }
@@ -534,16 +546,25 @@ async function addToMine(cacheKey){
   if(!w){toast('Erreur : oeuvre introuvable');return;}
   const now=new Date().toISOString();
   const id=uid();
-  const n={id,title:w.title,type:w.type,status:w.status,platform:w.platform||'',season:w.season||0,progress:w.progress||0,total:w.total||null,link:w.link||'',coverUrl:w.coverUrl||'',notes:w.notes||'',createdAt:now,updatedAt:now};
+  const n={id,title:w.title,type:w.type,status:'planned',workStatus:w.workStatus||'ongoing',platform:'',season:0,progress:0,total:w.total||null,link:w.link||'',coverUrl:w.coverUrl||'',notes:'',createdAt:now,updatedAt:now};
   await saveWork(id,n);
   toast('"'+w.title+'" ajouté à tes lectures !');
 }
 window.addToMine = addToMine;
 
+window.toggleTotal = function(){
+  const ws=document.getElementById('fws');
+  const tf=document.getElementById('total-field');
+  if(ws&&tf) tf.style.display=ws.value==='finished'?'block':'none';
+};
+
 async function doInc(id){
-  const w=(allData[me]||{})[id]; if(!w)return;
+  // Cherche dans allData[me] en parcourant toutes les valeurs (robuste au sanitize)
+  const works = allData[me]||{};
+  const w = works[id] || Object.values(works).find(x=>x.id===id);
+  if(!w)return;
   const updated=Object.assign({},w,{progress:(w.progress||0)+1,updatedAt:new Date().toISOString()});
-  await saveWork(id,updated);
+  await saveWork(updated.id,updated);
   toast('+1 → '+(w.type==='Anime'?'ép':'ch')+'. '+updated.progress);
 }
 
@@ -559,6 +580,10 @@ window.openModal = function(id){
   document.getElementById('fp').value=w?(w.platform||''):'';
   document.getElementById('fsn').value=w?(w.season||''):'';
   document.getElementById('fpr').value=w&&w.progress!=null?w.progress:'';
+  // Statut de l'œuvre (donnée partagée)
+  const fws=document.getElementById('fws');
+  fws.value=w?(w.workStatus||'ongoing'):'ongoing';
+  toggleTotal();
   document.getElementById('fto').value=w&&w.total!=null?w.total:'';
   document.getElementById('fl').value=w?(w.link||''):'';
   document.getElementById('fc').value=w?(w.coverUrl||''):'';
@@ -592,7 +617,8 @@ window.doSaveWork = async function(){
     platform:document.getElementById('fp').value.trim(),
     season:parseInt(document.getElementById('fsn').value)||0,
     progress:parseInt(document.getElementById('fpr').value)||0,
-    total:parseInt(document.getElementById('fto').value)||null,
+    workStatus:document.getElementById('fws').value,
+    total:document.getElementById('fws').value==='finished'?(parseInt(document.getElementById('fto').value)||null):null,
     link:document.getElementById('fl').value.trim(),
     coverUrl:document.getElementById('fc').value.trim(),
     notes:document.getElementById('fn').value.trim(),
